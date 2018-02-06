@@ -23,6 +23,8 @@ flags.DEFINE_float('data_fraction', 1.0, '')
 FLAGS = flags.FLAGS
 
 def main(argv):
+    print(tf.__version__)
+    
     # load data
     train_images = np.load(FLAGS.data_dir + 'fmnist_train_data.npy')
     train_labels = np.load(FLAGS.data_dir + 'fmnist_train_labels.npy')
@@ -45,7 +47,7 @@ def main(argv):
     # define classification loss
     label = tf.placeholder(tf.uint8, [None], name='label')
     oneHot = tf.one_hot(label,10)
-    cross_entropy  = tf.nn.softmax_cross_entropy_with_logits_v2(labels=oneHot, logits=output)
+    cross_entropy  = tf.nn.softmax_cross_entropy_with_logits(labels=oneHot, logits=output)
     reduce_mean_cross_entropy = tf.reduce_mean(cross_entropy)
     
     regularization_losses = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
