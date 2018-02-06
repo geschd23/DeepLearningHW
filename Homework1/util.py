@@ -1,7 +1,4 @@
-import tensorflow as tf
 import numpy as np
-import math
-import os
 
 def split_data(data, proportion): #function taken from hackathon_3 notebook and improved by Jingchao Zhang
     """
