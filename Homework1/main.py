@@ -18,11 +18,21 @@ flags.DEFINE_string('save_dir', 'model', 'directory where model graph and weight
 flags.DEFINE_integer('batch_size', 32, '')
 flags.DEFINE_integer('max_epoch_num', 100, '')
 flags.DEFINE_integer('patience', 5, '')
+flags.DEFINE_string('architecture', "50", '')
+flags.DEFINE_float('learning_rate', 0.0001, '')
+flags.DEFINE_float('keep_probability', 1.0, '')
+flags.DEFINE_bool('l2_regularizer', False, '')
 flags.DEFINE_float('data_fraction', 1.0, '')
 FLAGS = flags.FLAGS
 
 def main(argv):
     print(tf.__version__)
+    
+    # handle command line arguments
+    learning_rate = FLAGS.learning_rate
+    keep_probability = FLAGS.keep_probability
+    architecture = list(map(int, FLAGS.architecture.split(" ")))
+    regularizer = tf.contrib.layers.l2_regularizer(scale=1.) if FLAGS.l2_regularizer else None
     
     # load data
     train_images = np.load(FLAGS.data_dir + 'fmnist_train_data.npy')
@@ -40,7 +50,7 @@ def main(argv):
 
     # specify the network
     input = tf.placeholder(tf.float32, [None, 784], name='input_placeholder')
-    network = model.create_model(input)
+    network = model.create_model(input, architecture=architecture, regularizer=regularizer, keep_probability=keep_probability)
     output = tf.identity(network, name='output')
 
     # define classification loss
@@ -59,7 +69,7 @@ def main(argv):
 
     # set up training and saving functionality
     global_step_tensor = tf.get_variable('global_step', trainable=False, shape=[], initializer=tf.zeros_initializer)
-    optimizer = tf.train.AdamOptimizer(learning_rate = 0.0001)
+    optimizer = tf.train.AdamOptimizer(learning_rate = learning_rate)
     train_op = optimizer.minimize(total_loss, global_step=global_step_tensor)
     saver = tf.train.Saver()
     
