@@ -1,26 +1,33 @@
 import tensorflow as tf
 
-def create_model(input):
+def create_model(input, architecture, regularizer, keep_probability):
     """
     Generates a block of tensors
-    
+
     Args:
         - input: the input tensor
+        - architecture: array indicating the number of nodes to include in dense layers
+        - regularizer: the regularization function to use
+        - keep_probablity: probability of keeping a node during dropout
     """
+    layers = [input]
     with tf.name_scope('linear_model') as scope:
-        hidden1 = tf.layers.Dense(256,
-                             kernel_regularizer=tf.contrib.layers.l2_regularizer(scale=1.),
-                             bias_regularizer=tf.contrib.layers.l2_regularizer(scale=1.),
-                             activation=tf.nn.relu)
-        hidden2 = tf.layers.Dense(128,
-                             kernel_regularizer=tf.contrib.layers.l2_regularizer(scale=1.),
-                             bias_regularizer=tf.contrib.layers.l2_regularizer(scale=1.),
-                             activation=tf.nn.relu)
-        hidden3 = tf.layers.Dense(256,
-                             kernel_regularizer=tf.contrib.layers.l2_regularizer(scale=1.),
-                             bias_regularizer=tf.contrib.layers.l2_regularizer(scale=1.),
-                             activation=tf.nn.relu)                     
-        output = tf.layers.Dense(10,
-                             kernel_regularizer=tf.contrib.layers.l2_regularizer(scale=1.),
-                             bias_regularizer=tf.contrib.layers.l2_regularizer(scale=1.))
-        return output(hidden3(hidden2(hidden1(input))))
+        # dropout on input
+        layers.append(tf.layers.Dropout(keep_probability))
+        # construct each hidden layer
+        for nodes in architecture:
+            layers.append(tf.layers.Dense(nodes,
+                             kernel_regularizer=regularizer,
+                             bias_regularizer=regularizer,
+                             activation=tf.nn.relu))
+            layers.append(tf.layers.Dropout(keep_probability))
+        # construct the output layer
+        layers.append(tf.layers.Dense(10,
+                             kernel_regularizer=regularizer,
+                             bias_regularizer=regularizer))
+
+        # construct tensors from tensor objects
+        for i in range(len(layers)-1):
+            layers[i+1]=layers[i+1](layers[i])
+
+    return layers[len(layers)-1]

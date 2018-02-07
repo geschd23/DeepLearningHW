@@ -40,7 +40,7 @@ def main(argv):
 
     # specify the network
     input = tf.placeholder(tf.float32, [None, 784], name='input_placeholder')
-    network = model.create_model(input)
+    network = model.create_model(input, architecture=[256,128,256], regularizer=tf.contrib.layers.l2_regularizer(scale=1.), keep_probability=1.0)
     output = tf.identity(network, name='output')
 
     # define classification loss
