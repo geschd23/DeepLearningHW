@@ -18,7 +18,6 @@ flags.DEFINE_string('save_dir', 'model', 'directory where model graph and weight
 flags.DEFINE_integer('batch_size', 32, '')
 flags.DEFINE_integer('max_epoch_num', 100, '')
 flags.DEFINE_integer('patience', 5, '')
-flags.DEFINE_integer('nodes', 400, '')
 flags.DEFINE_float('data_fraction', 1.0, '')
 FLAGS = flags.FLAGS
 
@@ -41,7 +40,7 @@ def main(argv):
 
     # specify the network
     input = tf.placeholder(tf.float32, [None, 784], name='input_placeholder')
-    network = model.create_model(input,FLAGS.nodes)
+    network = model.create_model(input)
     output = tf.identity(network, name='output')
 
     # define classification loss
@@ -60,17 +59,17 @@ def main(argv):
 
     # set up training and saving functionality
     global_step_tensor = tf.get_variable('global_step', trainable=False, shape=[], initializer=tf.zeros_initializer)
-    optimizer = tf.train.AdamOptimizer()
+    optimizer = tf.train.AdamOptimizer(learning_rate = 0.0001)
     train_op = optimizer.minimize(total_loss, global_step=global_step_tensor)
     saver = tf.train.Saver()
     
     # set up early stopping
-    best_epoch = 0;
-    best_train_ce = math.inf;
-    best_validation_ce = math.inf;
-    best_test_ce = math.inf;
-    patience = FLAGS.patience;
-    wait = 0;
+    best_epoch = 0
+    best_train_ce = math.inf
+    best_validation_ce = math.inf
+    best_test_ce = math.inf
+    patience = FLAGS.patience
+    wait = 0
     
     with tf.Session() as session:
         session.run(tf.global_variables_initializer())
@@ -105,15 +104,15 @@ def main(argv):
             print(str(sum(conf_mxs)))
             
             if avg_validation_ce < best_validation_ce:
-                best_epoch = epoch;
-                best_train_ce = avg_train_ce;
-                best_validation_ce = avg_validation_ce;
-                wait = 0;
+                best_epoch = epoch
+                best_train_ce = avg_train_ce
+                best_validation_ce = avg_validation_ce
+                wait = 0
                 path_prefix = saver.save(session, os.path.join(FLAGS.save_dir, "homework_1"), global_step=0)
             else:
-                wait += 1;
+                wait += 1
                 if wait == patience:
-                    break;
+                    break
 
         print('Best Epoch: ' + str(best_epoch))
         print('Best TRAIN CROSS ENTROPY: ' + str(best_train_ce))
