@@ -1,8 +1,6 @@
 import tensorflow as tf
-import numpy as np
-import math
 
-def create_model(input, nodes):
+def create_model(input):
     """
     Generates a block of tensors
     
@@ -10,12 +8,19 @@ def create_model(input, nodes):
         - input: the input tensor
     """
     with tf.name_scope('linear_model') as scope:
-        hidden = tf.layers.Dense(nodes,
+        hidden1 = tf.layers.Dense(256,
                              kernel_regularizer=tf.contrib.layers.l2_regularizer(scale=1.),
                              bias_regularizer=tf.contrib.layers.l2_regularizer(scale=1.),
                              activation=tf.nn.relu)
+        hidden2 = tf.layers.Dense(128,
+                             kernel_regularizer=tf.contrib.layers.l2_regularizer(scale=1.),
+                             bias_regularizer=tf.contrib.layers.l2_regularizer(scale=1.),
+                             activation=tf.nn.relu)
+        hidden3 = tf.layers.Dense(256,
+                             kernel_regularizer=tf.contrib.layers.l2_regularizer(scale=1.),
+                             bias_regularizer=tf.contrib.layers.l2_regularizer(scale=1.),
+                             activation=tf.nn.relu)                     
         output = tf.layers.Dense(10,
                              kernel_regularizer=tf.contrib.layers.l2_regularizer(scale=1.),
                              bias_regularizer=tf.contrib.layers.l2_regularizer(scale=1.))
-    
-        return output(hidden(input))
+        return output(hidden3(hidden2(hidden1(input))))
