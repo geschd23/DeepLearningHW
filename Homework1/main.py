@@ -13,11 +13,12 @@ import util
 import model
 
 flags = tf.app.flags
+flags.DEFINE_integer('run_id', 0, '')
 flags.DEFINE_string('data_dir', '/work/cse496dl/shared/homework/01/', 'directory where FMNIST is located')
 flags.DEFINE_string('save_dir', 'model', 'directory where model graph and weights are saved')
 flags.DEFINE_integer('batch_size', 32, '')
-flags.DEFINE_integer('max_epoch_num', 100, '')
-flags.DEFINE_integer('patience', 5, '')
+flags.DEFINE_integer('max_epoch_num', 200, '')
+flags.DEFINE_integer('patience', 10, '')
 flags.DEFINE_string('architecture', "50", '')
 flags.DEFINE_float('learning_rate', 0.0001, '')
 flags.DEFINE_float('keep_probability', 1.0, '')
@@ -29,6 +30,10 @@ def main(argv):
     print(tf.__version__)
     
     # handle command line arguments
+    print("regularizer:",FLAGS.l2_regularizer)
+    print("keep_probability:",FLAGS.keep_probability)
+    print("learning_rate:",FLAGS.learning_rate)
+    print("architecture:",FLAGS.architecture)
     learning_rate = FLAGS.learning_rate
     keep_probability = FLAGS.keep_probability
     architecture = list(map(int, FLAGS.architecture.split(" ")))
@@ -66,6 +71,8 @@ def main(argv):
     total_loss = cross_entropy + REG_COEFF * sum(regularization_losses)
     
     confusion_matrix_op = tf.confusion_matrix(tf.argmax(oneHot, axis=1), tf.argmax(output, axis=1), num_classes=10)
+    accuracy = tf.equal(tf.argmax(oneHot, axis=1), tf.argmax(output, axis=1))
+    reduce_mean_accuracy = tf.reduce_mean(tf.cast(accuracy, tf.float32))
 
     # set up training and saving functionality
     global_step_tensor = tf.get_variable('global_step', trainable=False, shape=[], initializer=tf.zeros_initializer)
@@ -75,9 +82,8 @@ def main(argv):
     
     # set up early stopping
     best_epoch = 0
-    best_train_ce = math.inf
     best_validation_ce = math.inf
-    best_test_ce = math.inf
+    best_validation_acc = 0
     patience = FLAGS.patience
     wait = 0
     
@@ -91,32 +97,40 @@ def main(argv):
 
             # run gradient steps and report mean loss on train data
             ce_vals = []
+            acc_vals = []
             for i in range(train_num_examples // batch_size):
                 batch_xs = train_images[i*batch_size:(i+1)*batch_size, :]
                 batch_ys = train_labels[i*batch_size:(i+1)*batch_size]       
-                _, train_ce = session.run([train_op, reduce_mean_cross_entropy], {input: batch_xs, label: batch_ys})
+                _, train_ce, train_acc = session.run([train_op, reduce_mean_cross_entropy, reduce_mean_accuracy], {input: batch_xs, label: batch_ys})
                 ce_vals.append(train_ce)
+                acc_vals.append(train_acc)
             avg_train_ce = sum(ce_vals) / len(ce_vals)
+            avg_train_acc = sum(acc_vals) / len(acc_vals)
             print('TRAIN CROSS ENTROPY: ' + str(avg_train_ce))
+            print('TRAIN ACCURACY: ' + str(train_acc))
 
             # report mean validation loss
             ce_vals = []
+            acc_vals = []
             conf_mxs = []
             for i in range(validation_num_examples // batch_size):
                 batch_xs = validation_images[i*batch_size:(i+1)*batch_size, :]
                 batch_ys = validation_labels[i*batch_size:(i+1)*batch_size]
-                validation_ce, conf_matrix = session.run([reduce_mean_cross_entropy, confusion_matrix_op], {input: batch_xs, label: batch_ys})
+                validation_ce, validation_acc, conf_matrix = session.run([reduce_mean_cross_entropy, reduce_mean_accuracy, confusion_matrix_op], {input: batch_xs, label: batch_ys})
                 ce_vals.append(validation_ce)
+                acc_vals.append(validation_acc)
                 conf_mxs.append(conf_matrix)
             avg_validation_ce = sum(ce_vals) / len(ce_vals)
+            avg_validation_acc = sum(acc_vals) / len(acc_vals)
             print('VALIDATION CROSS ENTROPY: ' + str(avg_validation_ce))
+            print('VALIDATION ACCURACY: ' + str(validation_acc))
             print('VALIDATION CONFUSION MATRIX:')
             print(str(sum(conf_mxs)))
             
-            if avg_validation_ce < best_validation_ce:
+            if avg_validation_acc > best_validation_acc:
                 best_epoch = epoch
-                best_train_ce = avg_train_ce
                 best_validation_ce = avg_validation_ce
+                best_validation_acc = avg_validation_acc
                 wait = 0
                 path_prefix = saver.save(session, os.path.join(FLAGS.save_dir, "homework_1"), global_step=0)
             else:
@@ -125,8 +139,8 @@ def main(argv):
                     break
 
         print('Best Epoch: ' + str(best_epoch))
-        print('Best TRAIN CROSS ENTROPY: ' + str(best_train_ce))
         print('Best VALIDATION CROSS ENTROPY: ' + str(best_validation_ce))
+        print('Best VALIDATION ACCURACY: ' + str(best_validation_acc))
         #path_prefix = saver.save(session, os.path.join(FLAGS.save_dir, "mnist_inference"), global_step=global_step_tensor)
         
 if __name__ == "__main__":
