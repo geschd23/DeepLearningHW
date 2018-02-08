@@ -12,11 +12,6 @@ def create_model(input, architecture, regularizer, keep_probability):
     """
     layers = [input]
     
-    print(input)
-    print(architecture)
-    print(regularizer)
-    print(keep_probability)
-    
     with tf.name_scope('linear_model') as scope:
         # dropout on input
         layers.append(tf.layers.Dropout(keep_probability))
