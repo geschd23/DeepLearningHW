@@ -13,7 +13,6 @@ import util
 import model
 
 flags = tf.app.flags
-flags.DEFINE_integer('run_id', 0, '')
 flags.DEFINE_string('data_dir', '/work/cse496dl/shared/homework/01/', 'directory where FMNIST is located')
 flags.DEFINE_string('save_dir', 'model', 'directory where model graph and weights are saved')
 flags.DEFINE_integer('batch_size', 32, '')
@@ -36,7 +35,7 @@ def main(argv):
     print("architecture:",FLAGS.architecture)
     learning_rate = FLAGS.learning_rate
     keep_probability = FLAGS.keep_probability
-    architecture = list(map(int, FLAGS.architecture.split(" ")))
+    architecture = list(map(int, FLAGS.architecture.split(",")))
     regularizer = tf.contrib.layers.l2_regularizer(scale=1.) if FLAGS.l2_regularizer else None
     
     # load data
@@ -132,7 +131,7 @@ def main(argv):
                 best_validation_ce = avg_validation_ce
                 best_validation_acc = avg_validation_acc
                 wait = 0
-                path_prefix = saver.save(session, os.path.join(FLAGS.save_dir, "homework_1"), global_step=0)
+                #path_prefix = saver.save(session, os.path.join(FLAGS.save_dir, "homework_1"), global_step=0)
             else:
                 wait += 1
                 if wait == patience:
@@ -142,6 +141,8 @@ def main(argv):
         print('Best VALIDATION CROSS ENTROPY: ' + str(best_validation_ce))
         print('Best VALIDATION ACCURACY: ' + str(best_validation_acc))
         #path_prefix = saver.save(session, os.path.join(FLAGS.save_dir, "mnist_inference"), global_step=global_step_tensor)
+
+                
         
 if __name__ == "__main__":
     tf.app.run()

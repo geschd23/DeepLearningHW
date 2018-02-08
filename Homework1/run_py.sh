@@ -7,7 +7,6 @@
 #SBATCH --constraint=[gpu_k20|gpu_k40|gpu_p100]
 #SBATCH --error=/work/cse496dl/dgeschwe/output/job.%J.err
 #SBATCH --output=/work/cse496dl/dgeschwe/output/job.%J.out
-#SBATCH --qos=short		 # 6 hour job run time max
 
 module load singularity
 singularity exec docker://unlhcc/tensorflow-gpu python3 -u $@
