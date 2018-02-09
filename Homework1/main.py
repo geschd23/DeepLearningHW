@@ -1,8 +1,8 @@
-#------------------------------------------
-# Daniel Geschwender and Yanfeng Liu
+#---------------------------------------------------
+# Daniel Geschwender, Yanfeng Liu, Jeevan Rajagopal
 # CSCE 496/896: Deep Learning
 # Homework 1
-#------------------------------------------
+#---------------------------------------------------
 # Based off code provided in Hackathon 3
 
 import tensorflow as tf
