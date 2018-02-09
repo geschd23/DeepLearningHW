@@ -122,7 +122,7 @@ def main(argv):
             avg_validation_ce = sum(ce_vals) / len(ce_vals)
             avg_validation_acc = sum(acc_vals) / len(acc_vals)
             print('VALIDATION CROSS ENTROPY: ' + str(avg_validation_ce))
-            print('VALIDATION ACCURACY: ' + str(validation_acc))
+            print('VALIDATION ACCURACY: ' + str(avg_validation_acc))
             print('VALIDATION CONFUSION MATRIX:')
             print(str(sum(conf_mxs)))
             
