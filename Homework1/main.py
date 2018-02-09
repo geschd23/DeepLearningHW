@@ -22,6 +22,7 @@ flags.DEFINE_string('architecture', "50", '')
 flags.DEFINE_float('learning_rate', 0.0001, '')
 flags.DEFINE_float('keep_probability', 1.0, '')
 flags.DEFINE_bool('l2_regularizer', False, '')
+flags.DEFINE_bool('output_model', False, '')
 flags.DEFINE_float('data_fraction', 1.0, '')
 FLAGS = flags.FLAGS
 
@@ -126,21 +127,26 @@ def main(argv):
             print('VALIDATION CONFUSION MATRIX:')
             print(str(sum(conf_mxs)))
             
+            # update best results
             if avg_validation_acc > best_validation_acc:
                 best_epoch = epoch
                 best_validation_ce = avg_validation_ce
                 best_validation_acc = avg_validation_acc
                 wait = 0
-                #path_prefix = saver.save(session, os.path.join(FLAGS.save_dir, "homework_1"), global_step=0)
+                if FLAGS.output_model:
+                    path_prefix = saver.save(session, os.path.join(FLAGS.save_dir, "homework_1"), global_step=0)
             else:
                 wait += 1
                 if wait == patience:
                     break
+                 
+            # output tensorboard data
+            if FLAGS.output_model and epoch==0:
+                file_writer = tf.summary.FileWriter(FLAGS.save_dir, session.graph)
 
         print('Best Epoch: ' + str(best_epoch))
         print('Best VALIDATION CROSS ENTROPY: ' + str(best_validation_ce))
         print('Best VALIDATION ACCURACY: ' + str(best_validation_acc))
-        #path_prefix = saver.save(session, os.path.join(FLAGS.save_dir, "mnist_inference"), global_step=global_step_tensor)
 
                 
         
