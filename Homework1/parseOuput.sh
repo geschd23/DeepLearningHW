@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+
+for f in $(ls $1/*.out);
+do
+	for l in $(cat $f | grep "regularizer\|keep_probability\|learning_rate\|architecture\|Best VALIDATION ACCURACY" | sed 's/ //g');
+	do
+		echo -n '"'
+		echo -n $l | sed 's/.*://g';
+		echo -n '",'
+	done
+	echo ""
+done

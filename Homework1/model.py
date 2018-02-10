@@ -10,11 +10,13 @@ def create_model(input, architecture, regularizer, keep_probability):
         - regularizer: the regularization function to use
         - keep_probablity: probability of keeping a node during dropout
     """
-    layers = [input]
+    # normalize the input
+    layers = [tf.divide(input,255.0)]
     
     with tf.name_scope('linear_model') as scope:
         # dropout on input
         layers.append(tf.layers.Dropout(keep_probability))
+        
         # construct each hidden layer
         for nodes in architecture:
             layers.append(tf.layers.Dense(nodes,
@@ -22,6 +24,7 @@ def create_model(input, architecture, regularizer, keep_probability):
                              bias_regularizer=regularizer,
                              activation=tf.nn.relu))
             layers.append(tf.layers.Dropout(keep_probability))
+            
         # construct the output layer
         layers.append(tf.layers.Dense(10,
                              kernel_regularizer=regularizer,
