@@ -27,7 +27,7 @@ def k_fold_split(data, k, i): #function improved upon Paul Quint's draft
     Args:
         - data: numpy array; to be aplit along the first axis
         - k: positive integer; the data will be evenly split into k groups. 
-        - i: integer; 0 <= i <= k; the i-th group is used as the validation set, and the rest is used as 
+        - i: integer; 0 <= i < k; the i-th group is used as the validation set, and the rest is used as 
         the training set. 
 
     Returns: 
