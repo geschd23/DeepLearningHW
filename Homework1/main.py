@@ -20,7 +20,7 @@ flags.DEFINE_integer('max_epoch_num', 200, '')
 flags.DEFINE_integer('patience', 10, '')
 flags.DEFINE_string('architecture', "50", '')
 flags.DEFINE_float('learning_rate', 0.0001, '')
-flags.DEFINE_float('keep_probability', 1.0, '')
+flags.DEFINE_float('dropout_rate', 0.0, '')
 flags.DEFINE_bool('l2_regularizer', False, '')
 flags.DEFINE_bool('output_model', False, '')
 flags.DEFINE_float('data_fraction', 1.0, '')
@@ -32,17 +32,18 @@ def main(argv):
     
     # handle command line arguments
     print("regularizer:",FLAGS.l2_regularizer)
-    print("keep_probability:",FLAGS.keep_probability)
+    print("dropout_rate:",FLAGS.dropout_rate)
     print("learning_rate:",FLAGS.learning_rate)
     print("architecture:",FLAGS.architecture)
     learning_rate = FLAGS.learning_rate
-    keep_probability = FLAGS.keep_probability
+    dropout_rate = FLAGS.dropout_rate
     architecture = list(map(int, FLAGS.architecture.split(",")))
     regularizer = tf.contrib.layers.l2_regularizer(scale=1.) if FLAGS.l2_regularizer else None
     
     # specify the network
     input = tf.placeholder(tf.float32, [None, 784], name='input_placeholder')
-    network = model.create_model(input, architecture=architecture, regularizer=regularizer, keep_probability=keep_probability)
+    trainingMode = tf.placeholder(tf.bool)
+    network = model.create_model(input, trainingMode, architecture=architecture, regularizer=regularizer, dropout_rate=dropout_rate)
     output = tf.identity(network, name='output')
 
     # define classification loss
@@ -105,7 +106,7 @@ def main(argv):
                 for i in range(train_num_examples // batch_size):
                     batch_xs = train_images[i*batch_size:(i+1)*batch_size, :]
                     batch_ys = train_labels[i*batch_size:(i+1)*batch_size]       
-                    _, train_ce, train_acc = session.run([train_op, reduce_mean_cross_entropy, reduce_mean_accuracy], {input: batch_xs, label: batch_ys})
+                    _, train_ce, train_acc = session.run([train_op, reduce_mean_cross_entropy, reduce_mean_accuracy], {input: batch_xs, label: batch_ys, trainingMode: True})
                     ce_vals.append(train_ce)
                     acc_vals.append(train_acc)
                 avg_train_ce = sum(ce_vals) / len(ce_vals)
@@ -120,7 +121,7 @@ def main(argv):
                 for i in range(validation_num_examples // batch_size):
                     batch_xs = validation_images[i*batch_size:(i+1)*batch_size, :]
                     batch_ys = validation_labels[i*batch_size:(i+1)*batch_size]
-                    validation_ce, validation_acc, conf_matrix = session.run([reduce_mean_cross_entropy, reduce_mean_accuracy, confusion_matrix_op], {input: batch_xs, label: batch_ys})
+                    validation_ce, validation_acc, conf_matrix = session.run([reduce_mean_cross_entropy, reduce_mean_accuracy, confusion_matrix_op], {input: batch_xs, label: batch_ys, trainingMode: False})
                     ce_vals.append(validation_ce)
                     acc_vals.append(validation_acc)
                     conf_mxs.append(conf_matrix)

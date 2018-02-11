@@ -3,7 +3,7 @@
 id=1
 for a in '' '--l2_regularizer';
 do
-	for b in '--keep_probability 1.0' '--keep_probability 0.7';
+	for b in '--dropout_rate 0.0' '--dropout_rate 0.3';
 	do
 		for c in '--learning_rate 0.01' '--learning_rate 0.001'  '--learning_rate 0.0001';
 		do
