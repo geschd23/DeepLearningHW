@@ -2,7 +2,7 @@
 
 for f in $(ls $1/*.out);
 do
-	for l in $(cat $f | grep "regularizer\|keep_probability\|learning_rate\|architecture\|Best VALIDATION ACCURACY" | sed 's/ //g');
+	for l in $(cat $f | grep "regularizer\|keep_probability\|learning_rate\|architecture\|Best VALIDATION ACCURACY\|Average accuracy across k folds" | sed 's/ //g');
 	do
 		echo -n '"'
 		echo -n $l | sed 's/.*://g';
