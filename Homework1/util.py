@@ -17,7 +17,7 @@ def split_data(data, proportion): #function taken from hackathon_3 notebook and 
     s = np.random.permutation(size)
     split_idx = int(proportion * size)
     train = data[s[:split_idx]]
-    val = , data[s[split_idx:]]
+    val = data[s[split_idx:]]
     return train, val
 
 def k_fold_split(data, k, i): #function improved upon Paul Quint's draft
