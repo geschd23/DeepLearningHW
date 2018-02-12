@@ -2,6 +2,14 @@
 
 ## Common techniques for improving model performance:
 * Normalize inputs to [0, 1] to avoid high variance due to uneven scales
+* Add Batch Normalization layers between the convolution layer and activation function to avoid internal covariate shift
+   * [BatchNorm](https://www.tensorflow.org/api_docs/python/tf/nn/batch_normalization)
+* Consider ELU\Leaky ReLU as alternative options for ReLU activation function to avoid dead neurons
+   * [ELU](https://www.tensorflow.org/api_docs/python/tf/nn/elu)
+   * [ReLU](https://www.tensorflow.org/api_docs/python/tf/nn/leaky_relu)
+* Consider skip connections between convolution blocks to share features and avoid vanishing gradients
+   * [Residual Network](https://arxiv.org/abs/1512.03385) (CVPR 2015 Best Paper)
+   * [Densely Connected Convolutional Networks](http://openaccess.thecvf.com/content_cvpr_2017/papers/Huang_Densely_Connected_Convolutional_CVPR_2017_paper.pdf) (CVPR 2017 Best Paper)
 * Early stopping: train the model until performance on the validation set starts dropping (due to overfitting), and then retrain the model up to that epoch. 
 * Data augmentation (especially useful on images):
     * Rotation
