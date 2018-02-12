@@ -3,8 +3,8 @@
 ## Common techniques for improving model performance:
 * Normalize inputs to [0, 1] to avoid high variance due to uneven scales
 * Add Batch Normalization layers between the convolution layer and activation function to avoid internal covariate shift
-* Larger batch sizes stablize the training process at the cost of GPU memory consumption
    * [BatchNorm](https://www.tensorflow.org/api_docs/python/tf/nn/batch_normalization)
+* Larger batch sizes stablize the training process at the cost of GPU memory consumption
 * Consider ELU\Leaky ReLU as alternative options for ReLU activation function to avoid dead neurons
    * [ELU](https://www.tensorflow.org/api_docs/python/tf/nn/elu)
    * [ReLU](https://www.tensorflow.org/api_docs/python/tf/nn/leaky_relu)
