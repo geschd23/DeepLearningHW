@@ -9,7 +9,7 @@
     * Shift
     * Shearing
     * Horizontal flip
-    * Hertical flip
+    * Vertical flip
     * Noise
 * Overfitting vs. Underfitting:
     * Overfitting: Good performance on the training set, but poor performance on the validation set. 
