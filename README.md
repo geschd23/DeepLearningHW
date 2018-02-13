@@ -12,6 +12,8 @@
    * [Residual Network](https://arxiv.org/abs/1512.03385) (CVPR 2015 Best Paper)
    * [Densely Connected Convolutional Networks](http://openaccess.thecvf.com/content_cvpr_2017/papers/Huang_Densely_Connected_Convolutional_CVPR_2017_paper.pdf) (CVPR 2017 Best Paper)
 * Early stopping: train the model until performance on the validation set starts dropping (due to overfitting), and then retrain the model up to that epoch. 
+* Use pre-trained model on large datasets and finetune it for our purpose, instead of training it from scratch
+* Consider learning rate exponential decay or learning rate scheduler
 * Data augmentation (especially useful on images):
     * Rotation
     * Scale
