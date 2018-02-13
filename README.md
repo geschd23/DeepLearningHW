@@ -7,7 +7,7 @@
 * Larger batch sizes stablize the training process at the cost of GPU memory consumption
 * Consider ELU\Leaky ReLU as alternative options for ReLU activation function to avoid dead neurons
    * [ELU](https://www.tensorflow.org/api_docs/python/tf/nn/elu)
-   * [ReLU](https://www.tensorflow.org/api_docs/python/tf/nn/leaky_relu)
+   * [Leaky ReLU](https://www.tensorflow.org/api_docs/python/tf/nn/leaky_relu)
 * Consider skip connections between convolution blocks to share features and avoid vanishing gradients
    * [Residual Network](https://arxiv.org/abs/1512.03385) (CVPR 2015 Best Paper)
    * [Densely Connected Convolutional Networks](http://openaccess.thecvf.com/content_cvpr_2017/papers/Huang_Densely_Connected_Convolutional_CVPR_2017_paper.pdf) (CVPR 2017 Best Paper)
