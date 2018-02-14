@@ -18,7 +18,8 @@ flags.DEFINE_string('save_dir', 'model', 'directory where model graph and weight
 flags.DEFINE_integer('batch_size', 32, '')
 flags.DEFINE_integer('max_epoch_num', 200, '')
 flags.DEFINE_integer('patience', 10, '')
-flags.DEFINE_string('filters', "2", '')
+flags.DEFINE_string('filters', "32, 64, 128", '')
+flags.DEFINE_string('linear_nodes', "64, 64", '')
 flags.DEFINE_float('learning_rate', 0.0001, '')
 flags.DEFINE_float('dropout_rate', 0.0, '')
 flags.DEFINE_bool('l2_regularizer', False, '')
@@ -35,18 +36,19 @@ def main(argv):
     print("dropout_rate:",FLAGS.dropout_rate)
     print("learning_rate:",FLAGS.learning_rate)
     print("filters:",FLAGS.filters)
+    print("linear_nodes:",FLAGS.linear_nodes)
     learning_rate = FLAGS.learning_rate
     dropout_rate = FLAGS.dropout_rate
     filters = list(map(int, FLAGS.filters.split(",")))
+    linear_nodes = list(map(int, FLAGS.linear_nodes.split(",")))
     regularizer = tf.contrib.layers.l2_regularizer(scale=1.) if FLAGS.l2_regularizer else None
     
     # specify the network
     input = tf.placeholder(tf.float32, [None, 16641], name='input_placeholder')
     input2D = tf.reshape(input, [-1, 129, 129, 1])
     trainingMode = tf.placeholder(tf.bool)
-    network = model.conv_block(input2D, filters=filters, dropout_rate=dropout_rate, is_training=trainingMode)
-    flat = tf.reshape(network, [-1, 129*129*filters[-1]])
-    denseOut = tf.layers.dense(flat, 7)
+    conv_module = model.conv_block(input2D, filters=filters, dropout_rate=dropout_rate, is_training=trainingMode)
+    denseOut = model.classification_end(conv_module, linear_nodes=linear_nodes, dropout_rate=dropout_rate, is_training=trainingMode)
     output = tf.identity(denseOut, name='output')
 
     # define classification loss
