@@ -48,7 +48,8 @@ def main(argv):
     input2D = tf.reshape(input, [-1, 129, 129, 1])
     trainingMode = tf.placeholder(tf.bool)
     conv_module = model.conv_block(input2D, filters=filters, dropout_rate=dropout_rate, is_training=trainingMode)
-    denseOut = model.classification_end(conv_module, linear_nodes=linear_nodes, dropout_rate=dropout_rate, is_training=trainingMode)
+    conv_out = tf.identity(conv_module, name='conv_out')
+    denseOut = model.classification_end(conv_out, linear_nodes=linear_nodes, dropout_rate=dropout_rate, is_training=trainingMode)
     output = tf.identity(denseOut, name='output')
 
     # define classification loss
