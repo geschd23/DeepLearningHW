@@ -1,7 +1,7 @@
 import tensorflow as tf
 
 # Based on function provided in Hackathon 5
-def conv_block(inputs, filters, dropout_rate, is_training):
+def conv_block(inputs, filters, regularizer, dropout_rate, is_training):
     """
     Args:
         - inputs: 4D tensor of shape NHWC
@@ -13,9 +13,12 @@ def conv_block(inputs, filters, dropout_rate, is_training):
         x = inputs
         for i in range(len(filters)):
             x = tf.layers.dropout(x, dropout_rate, training=is_training)
-            x = tf.layers.conv2d(x, filters[i], 3, 1, padding='same')
-            x = tf.layers.batch_normalization(x, training=is_training)
-            x = tf.nn.elu(x)
+            if filters[i]==0:
+                x = tf.layers.max_pooling2d(x, 2, 2, padding='same')
+            else:
+                x = tf.layers.conv2d(x, filters[i], 3, 1, padding='same', kernel_regularizer=regularizer, bias_regularizer=regularizer)
+                x = tf.layers.batch_normalization(x, training=is_training)
+                x = tf.nn.elu(x)
     return x
 
 # Based on "Densely Connected Convolutional Networks" by Huang et al.
@@ -57,10 +60,10 @@ def transition_layer(inputs, compression, dropout_rate, is_training):
         x = tf.layers.batch_normalization(inputs, training=is_training)
         numFilters = tf.floor(tf.shape(inputs)[3]*compression)
         x = tf.layers.conv2d(x, numFilters, 1, 1, padding='same')
-        x = tf.layers.average_pooling2d(x, 2, 2)
+        x = tf.layers.average_pooling2d(x, 2, 2, padding='same')
     return x
 
-def classification_end(x, linear_nodes, dropout_rate, is_training):
+def classification_end(x, linear_nodes, regularizer, dropout_rate, is_training):
     """
     Args:
         - x: 4D tensor of shape NHWC; output of another module (conv/dense)
@@ -68,11 +71,11 @@ def classification_end(x, linear_nodes, dropout_rate, is_training):
         - dropout_rate: chance of dropping a node
         - is_training: boolean scalar tensor
     """
-    x = tf.contrib.layers.flatten(x)
+    x = tf.reshape(x, [-1, x.shape[1]*x.shape[2]*x.shape[3]])
     with tf.name_scope('linear') as scope:
         for i in range(len(linear_nodes)):
             x = tf.layers.dropout(x, dropout_rate, training=is_training)
-            x = tf.layers.dense(x, linear_nodes[i])
+            x = tf.layers.dense(x, linear_nodes[i], kernel_regularizer=regularizer, bias_regularizer=regularizer)
             x = tf.layers.batch_normalization(x, training=is_training)
             x = tf.nn.elu(x)
         x = tf.layers.dense(x, 7)

@@ -18,10 +18,10 @@ flags.DEFINE_string('save_dir', 'model', 'directory where model graph and weight
 flags.DEFINE_integer('batch_size', 32, '')
 flags.DEFINE_integer('max_epoch_num', 200, '')
 flags.DEFINE_integer('patience', 10, '')
-flags.DEFINE_string('filters', "32, 64, 128", '')
-flags.DEFINE_string('linear_nodes', "64, 64", '')
-flags.DEFINE_float('learning_rate', 0.0001, '')
-flags.DEFINE_float('dropout_rate', 0.0, '')
+flags.DEFINE_string('filters', "2,0,4,0", '')
+flags.DEFINE_string('linear_nodes', "", '')
+flags.DEFINE_float('learning_rate', 0.001, '')
+flags.DEFINE_float('dropout_rate', 0.2, '')
 flags.DEFINE_bool('l2_regularizer', False, '')
 flags.DEFINE_bool('output_model', False, '')
 flags.DEFINE_float('data_fraction', 1.0, '')
@@ -39,17 +39,17 @@ def main(argv):
     print("linear_nodes:",FLAGS.linear_nodes)
     learning_rate = FLAGS.learning_rate
     dropout_rate = FLAGS.dropout_rate
-    filters = list(map(int, FLAGS.filters.split(",")))
-    linear_nodes = list(map(int, FLAGS.linear_nodes.split(",")))
+    filters = list(map(int, FLAGS.filters.split(","))) if FLAGS.filters != "" else []
+    linear_nodes = list(map(int, FLAGS.linear_nodes.split(","))) if FLAGS.linear_nodes != "" else []
     regularizer = tf.contrib.layers.l2_regularizer(scale=1.) if FLAGS.l2_regularizer else None
     
     # specify the network
     input = tf.placeholder(tf.float32, [None, 16641], name='input_placeholder')
     input2D = tf.reshape(input, [-1, 129, 129, 1])
     trainingMode = tf.placeholder(tf.bool)
-    conv_module = model.conv_block(input2D, filters=filters, dropout_rate=dropout_rate, is_training=trainingMode)
+    conv_module = model.conv_block(input2D, filters=filters, regularizer=regularizer, dropout_rate=dropout_rate, is_training=trainingMode)
     conv_out = tf.identity(conv_module, name='conv_out')
-    denseOut = model.classification_end(conv_out, linear_nodes=linear_nodes, dropout_rate=dropout_rate, is_training=trainingMode)
+    denseOut = model.classification_end(conv_out, linear_nodes=linear_nodes, regularizer=regularizer, dropout_rate=dropout_rate, is_training=trainingMode)
     output = tf.identity(denseOut, name='output')
 
     # define classification loss
@@ -83,6 +83,8 @@ def main(argv):
         validation_labels = np.load(FLAGS.data_dir + 'EMODB-German/test_y_' + str(fold+1) + '.npy')
         train_num_examples = train_images.shape[0]
         validation_num_examples = validation_images.shape[0]
+        print("train size = ", train_num_examples)
+        print("validation size = ", validation_num_examples)
         
         # reduce dataset according to data_fraction parameter
         train_images, _ = util.split_data(train_images, FLAGS.data_fraction)
