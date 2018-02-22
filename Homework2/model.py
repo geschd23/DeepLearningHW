@@ -32,9 +32,9 @@ def transfer_model(transfer, filters, linear_nodes, regularizer, dropout_rate):
     """
     print("test")
     session = tf.Session()
-    saver = tf.train.import_meta_graph('model/emodb_homework_2-0.meta')
+    saver = tf.train.import_meta_graph(transfer + '.meta')
     print("test")
-    saver.restore(session, 'model/emodb_homework_2-0')
+    saver.restore(session, transfer)
     graph = session.graph
     input = graph.get_tensor_by_name('input_placeholder:0')
     is_training = graph.get_tensor_by_name('is_training:0')
