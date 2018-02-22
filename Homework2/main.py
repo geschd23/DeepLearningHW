@@ -15,6 +15,8 @@ import model
 flags = tf.app.flags
 flags.DEFINE_string('data_dir', '/work/cse496dl/shared/homework/02/', 'directory where EMODB/SAVEE is located')
 flags.DEFINE_string('save_dir', 'model', 'directory where model graph and weights are saved')
+flags.DEFINE_string('dataset', 'EMODB-German', 'dataset to run on')
+flags.DEFINE_string('model_transfer', '', 'Where to load model to transfer from')
 flags.DEFINE_integer('batch_size', 32, '')
 flags.DEFINE_integer('max_epoch_num', 200, '')
 flags.DEFINE_integer('patience', 10, '')
@@ -25,7 +27,7 @@ flags.DEFINE_float('dropout_rate', 0.2, '')
 flags.DEFINE_bool('l2_regularizer', False, '')
 flags.DEFINE_bool('output_model', False, '')
 flags.DEFINE_float('data_fraction', 1.0, '')
-flags.DEFINE_integer('fold', 4, '')
+flags.DEFINE_integer('fold', 0, '')
 FLAGS = flags.FLAGS
 
 def main(argv):
@@ -42,15 +44,15 @@ def main(argv):
     filters = list(map(int, FLAGS.filters.split(","))) if FLAGS.filters != "" else []
     linear_nodes = list(map(int, FLAGS.linear_nodes.split(","))) if FLAGS.linear_nodes != "" else []
     regularizer = tf.contrib.layers.l2_regularizer(scale=1.) if FLAGS.l2_regularizer else None
+    folds = range(1,5) if FLAGS.fold == 0 else [FLAGS.fold]
+    modelFile = "emodb_homework_2" if FLAGS.dataset == "EMODB-German" else "savee_homework_2"
+     
     
     # specify the network
-    input = tf.placeholder(tf.float32, [None, 16641], name='input_placeholder')
-    input2D = tf.reshape(input, [-1, 129, 129, 1])
-    trainingMode = tf.placeholder(tf.bool)
-    conv_module = model.conv_block(input2D, filters=filters, regularizer=regularizer, dropout_rate=dropout_rate, is_training=trainingMode)
-    conv_out = tf.identity(conv_module, name='conv_out')
-    denseOut = model.classification_end(conv_out, linear_nodes=linear_nodes, regularizer=regularizer, dropout_rate=dropout_rate, is_training=trainingMode)
-    output = tf.identity(denseOut, name='output')
+    if FLAGS.model_transfer == "":
+        input, output, trainingMode = model.original_model(filters=filters, linear_nodes=linear_nodes, regularizer=regularizer, dropout_rate=dropout_rate)
+    else:
+        input, output, trainingMode = model.transfer_model(transfer=FLAGS.model_transfer, filters=filters, linear_nodes=linear_nodes, regularizer=regularizer, dropout_rate=dropout_rate)
 
     # define classification loss
     label = tf.placeholder(tf.uint8, [None, 7], name='label')
@@ -72,15 +74,15 @@ def main(argv):
     saver = tf.train.Saver()
     
     k_fold_accuracy = []
-    
-    for fold in range(FLAGS.fold):
+
+    for fold in folds:
         print("Beginning fold ", fold)
         
         # load data
-        train_images = np.load(FLAGS.data_dir + 'EMODB-German/train_x_' + str(fold+1) + '.npy')
-        train_labels = np.load(FLAGS.data_dir + 'EMODB-German/train_y_' + str(fold+1) + '.npy')
-        validation_images = np.load(FLAGS.data_dir + 'EMODB-German/test_x_' + str(fold+1) + '.npy')
-        validation_labels = np.load(FLAGS.data_dir + 'EMODB-German/test_y_' + str(fold+1) + '.npy')
+        train_images = np.load(FLAGS.data_dir + FLAGS.dataset + '/train_x_' + str(fold) + '.npy')
+        train_labels = np.load(FLAGS.data_dir + FLAGS.dataset + '/train_y_' + str(fold) + '.npy')
+        validation_images = np.load(FLAGS.data_dir + FLAGS.dataset + '/test_x_' + str(fold) + '.npy')
+        validation_labels = np.load(FLAGS.data_dir + FLAGS.dataset + '/test_y_' + str(fold) + '.npy')
         train_num_examples = train_images.shape[0]
         validation_num_examples = validation_images.shape[0]
         print("train size = ", train_num_examples)
@@ -146,7 +148,7 @@ def main(argv):
                     best_validation_acc = avg_validation_acc
                     wait = 0
                     if FLAGS.output_model:
-                        path_prefix = saver.save(session, os.path.join(FLAGS.save_dir, "homework_1"), global_step=0)
+                        path_prefix = saver.save(session, os.path.join(FLAGS.save_dir, modelFile), global_step=0)
                 else:
                     wait += 1
                     if wait == patience:
