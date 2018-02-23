@@ -18,7 +18,7 @@ flags.DEFINE_string('save_dir', 'model', 'directory where model graph and weight
 flags.DEFINE_string('dataset', 'EMODB-German', 'dataset to run on')
 flags.DEFINE_string('model_transfer', '', 'Where to load model to transfer from')
 flags.DEFINE_integer('batch_size', 32, '')
-flags.DEFINE_integer('max_epoch_num', 200, '')
+flags.DEFINE_integer('max_epoch_num', 50, '')
 flags.DEFINE_integer('patience', 10, '')
 flags.DEFINE_string('filters', "2,0,4,0", '')
 flags.DEFINE_string('linear_nodes', "", '')
@@ -95,9 +95,9 @@ def main(argv):
         validation_labels, _ = util.split_data(validation_labels, FLAGS.data_fraction)
 
         # set up early stopping
-        best_epoch = 0
-        best_validation_ce = math.inf
-        best_validation_acc = 0
+        final_epoch = 0
+        final_validation_ce = math.inf
+        final_validation_acc = 0
         patience = FLAGS.patience
         wait = 0
 
@@ -141,11 +141,11 @@ def main(argv):
                 print('VALIDATION CONFUSION MATRIX:')
                 print(str(sum(conf_mxs)))
 
-                # update best results
-                if avg_validation_acc > best_validation_acc:
-                    best_epoch = epoch
-                    best_validation_ce = avg_validation_ce
-                    best_validation_acc = avg_validation_acc
+                # update final results
+                if avg_validation_acc > final_validation_acc or patience == 0:
+                    final_epoch = epoch
+                    final_validation_ce = avg_validation_ce
+                    final_validation_acc = avg_validation_acc
                     wait = 0
                     if FLAGS.output_model:
                         path_prefix = saver.save(session, os.path.join(FLAGS.save_dir, modelFile), global_step=0)
@@ -160,12 +160,12 @@ def main(argv):
 
             
             print("Results for fold", fold)
-            print('Best Epoch: ' + str(best_epoch))
-            print('Best VALIDATION CROSS ENTROPY: ' + str(best_validation_ce))
-            print('Best VALIDATION ACCURACY: ' + str(best_validation_acc))
-            k_fold_accuracy.append(best_validation_acc)
+            print('Final Epoch: ' + str(final_epoch))
+            print('Final VALIDATION CROSS ENTROPY: ' + str(final_validation_ce))
+            print('Final VALIDATION ACCURACY: ' + str(final_validation_acc))
+            k_fold_accuracy.append(final_validation_acc)
     
-    # report average best accuracy across all k folds
+    # report average final accuracy across all k folds
     print('Average accuracy across k folds: '+str(sum(k_fold_accuracy) / len(k_fold_accuracy)))
                 
         
