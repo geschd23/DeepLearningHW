@@ -16,7 +16,7 @@ flags = tf.app.flags
 flags.DEFINE_string('data_dir', '/work/cse496dl/shared/homework/02/', 'directory where EMODB/SAVEE is located')
 flags.DEFINE_string('save_dir', 'model', 'directory where model graph and weights are saved')
 flags.DEFINE_string('dataset', 'EMODB-German', 'dataset to run on')
-flags.DEFINE_string('model_transfer', 'model/emodb_homework_2-0', 'Where to load model to transfer from')
+flags.DEFINE_string('model_transfer', '', 'Where to load model to transfer from')
 flags.DEFINE_integer('batch_size', 32, '')
 flags.DEFINE_integer('max_epoch_num', 200, '')
 flags.DEFINE_integer('patience', 10, '')
