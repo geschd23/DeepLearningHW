@@ -30,19 +30,15 @@ def transfer_model(transfer, filters, linear_nodes, regularizer, dropout_rate):
         - dropout_rate: chance of dropping a node
         - is_training: boolean scalar tensor
     """
-    print("test")
     session = tf.Session()
     saver = tf.train.import_meta_graph(transfer + '.meta')
-    print("test")
     saver.restore(session, transfer)
     graph = session.graph
     input = graph.get_tensor_by_name('input_placeholder:0')
     is_training = graph.get_tensor_by_name('is_training:0')
-    print("test")
     conv_out = graph.get_tensor_by_name('transfer_point:0')
     stop_grad = tf.stop_gradient(conv_out)
     denseOut = classification_end(stop_grad, linear_nodes=linear_nodes, regularizer=regularizer, dropout_rate=dropout_rate, is_training=is_training)
-    print("test")
     output = tf.identity(denseOut, name='output')
     return (input, output, is_training)
 
