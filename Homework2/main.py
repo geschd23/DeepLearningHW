@@ -32,7 +32,7 @@ FLAGS = flags.FLAGS
 
 def main(argv):
     print(tf.__version__)
-    
+
     # handle command line arguments
     print("regularizer:",FLAGS.l2_regularizer)
     print("dropout_rate:",FLAGS.dropout_rate)
@@ -46,8 +46,8 @@ def main(argv):
     regularizer = tf.contrib.layers.l2_regularizer(scale=1.)
     folds = range(1,5) if FLAGS.fold == 0 else [FLAGS.fold]
     modelFile = "emodb_homework_2" if FLAGS.dataset == "EMODB-German" else "savee_homework_2"
-     
-    
+
+
     # specify the network
     if FLAGS.model_transfer == "":
         input, output, trainingMode = model.original_model(filters=filters, linear_nodes=linear_nodes, regularizer=regularizer, dropout_rate=dropout_rate)
@@ -61,7 +61,7 @@ def main(argv):
     regularization_losses = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
     REG_COEFF = FLAGS.l2_regularizer
     total_loss = reduce_mean_cross_entropy + REG_COEFF * sum(regularization_losses)
-    
+
     # setup confusion matrix and accuracy
     confusion_matrix_op = tf.confusion_matrix(tf.argmax(label, axis=1), tf.argmax(output, axis=1), num_classes=7)
     accuracy = tf.equal(tf.argmax(label, axis=1), tf.argmax(output, axis=1))
@@ -70,15 +70,15 @@ def main(argv):
     # set up training and saving functionality
     global_step_tensor = tf.get_variable('global_step', trainable=False, shape=[], initializer=tf.zeros_initializer)
     optimizer = tf.train.AdamOptimizer(learning_rate = learning_rate)
-    var_list = None if FLAGS.dataset == "EMODB-German" else tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, "new_layers")
+    var_list = None if FLAGS.model_transfer == "" else tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, "new_layers")
     train_op = optimizer.minimize(total_loss, global_step=global_step_tensor, var_list=var_list)
     saver = tf.train.Saver()
-    
+
     k_fold_accuracy = []
 
     for fold in folds:
         print("Beginning fold ", fold)
-        
+
         # load data
         train_images = np.load(FLAGS.data_dir + FLAGS.dataset + '/train_x_' + str(fold) + '.npy')
         train_labels = np.load(FLAGS.data_dir + FLAGS.dataset + '/train_y_' + str(fold) + '.npy')
@@ -88,7 +88,7 @@ def main(argv):
         validation_num_examples = validation_images.shape[0]
         print("train size = ", train_num_examples)
         print("validation size = ", validation_num_examples)
-        
+
         # reduce dataset according to data_fraction parameter
         train_images, _ = util.split_data(train_images, FLAGS.data_fraction)
         train_labels, _ = util.split_data(train_labels, FLAGS.data_fraction)
@@ -115,7 +115,7 @@ def main(argv):
                 acc_vals = []
                 for i in range(train_num_examples // batch_size):
                     batch_xs = train_images[i*batch_size:(i+1)*batch_size, :]
-                    batch_ys = train_labels[i*batch_size:(i+1)*batch_size]       
+                    batch_ys = train_labels[i*batch_size:(i+1)*batch_size]
                     _, train_ce, train_acc = session.run([train_op, reduce_mean_cross_entropy, reduce_mean_accuracy], {input: batch_xs, label: batch_ys, trainingMode: True})
                     ce_vals.append(train_ce)
                     acc_vals.append(train_acc)
@@ -159,16 +159,16 @@ def main(argv):
                 if FLAGS.output_model and epoch==0:
                     file_writer = tf.summary.FileWriter(FLAGS.save_dir, session.graph)
 
-            
+
             print("Results for fold", fold)
             print('Final Epoch: ' + str(final_epoch))
             print('Final VALIDATION CROSS ENTROPY: ' + str(final_validation_ce))
             print('Final VALIDATION ACCURACY: ' + str(final_validation_acc))
             k_fold_accuracy.append(final_validation_acc)
-    
+
     # report average final accuracy across all k folds
     print('Average accuracy across k folds: '+str(sum(k_fold_accuracy) / len(k_fold_accuracy)))
-                
-        
+
+
 if __name__ == "__main__":
     tf.app.run()
