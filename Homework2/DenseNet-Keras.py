@@ -116,20 +116,26 @@ def denseblock_down(x, concat_axis, nb_layers, nb_filter, growth_rate,
 
     return x, nb_filter
 
-def DenseNet(nb_classes, img_dim, convblock_per_DB=4, DB_per_stage=2, 
+def DenseNet(nb_classes, img_dim, convblock_per_DB=4, num_DB=2, 
              growth_rate=16, nb_filter=32, upsampling_mode='upsampling2d', 
              dropout_rate=0.2, weight_decay=1E-4):
     """ Build the DenseNet model
-    :param nb_classes: int -- number of classes
-    :param img_dim: tuple -- (channels, rows, columns)
-    :param depth: int -- how many layers
-    :param nb_dense_block: int -- number of dense blocks to add to end
-    :param growth_rate: int -- number of filters to add
-    :param nb_filter: int -- number of filters
-    :param dropout_rate: float -- dropout rate
-    :param weight_decay: float -- weight decay
-    :returns: keras model with nb_layers of conv_factory appended
-    :rtype: keras model
+
+    Inputs:
+    =======
+    nb_classes: int -- number of classes
+    img_dim: tuple -- (rows, columns, channels)
+    convblock_per_DB: # of conv blocks per dense block
+    num_DB: int -- # of dense blocks to add to end
+    growth_rate: int -- number of filters to add
+    nb_filter: int -- number of filters
+    upsampling_mode: str -- 'upsampling2d' or 'conv2dtranspose'
+    dropout_rate: float -- dropout rate
+    weight_decay: float -- weight decay
+    
+    Outputs:
+    ========
+    densenet: keras model -- nb_layers of conv_factory appended
     """
     
     if K.image_dim_ordering() == "th":
@@ -148,7 +154,7 @@ def DenseNet(nb_classes, img_dim, convblock_per_DB=4, DB_per_stage=2,
 
     # Downsampling (DenseBlock - TransitionDown) * N =============
     concat_node_list = []
-    for block_idx in range(DB_per_stage):
+    for block_idx in range(num_DB):
         concat_feature_list = []
         concat_feature_list.append(x)
         x, nb_filter = denseblock_down(x, concat_axis, convblock_per_DB,
