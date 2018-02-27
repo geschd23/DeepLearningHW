@@ -38,3 +38,17 @@
 * **Different & small dataset**: avoid overfitting by not fine-tuning the weights on a small dataset, and use extracted features from lower levels of the ConvNet which are more generalizable.
 * **Similar & large dataset**: with a large dataset we can fine-tune the weights with less of a chance to overfit the training data.
 * **Different & large dataset**: with a large dataset we again can fine-tune the weights with less of a chance to overfit.
+
+## Generative Models
+* [Variational Autoencoder](http://kvfrans.com/variational-autoencoders-explained/)
+* [Generative Adversarial Network](https://deeplearning4j.org/generative-adversarial-network)
+* [Wasserstain GAN](https://arxiv.org/abs/1701.07875)
+* [Image Style Transfer](https://www.cv-foundation.org/openaccess/content_cvpr_2016/papers/Gatys_Image_Style_Transfer_CVPR_2016_paper.pdf)
+
+## Reinforcement Learning
+* [Q-Learning](https://link.springer.com/article/10.1007/BF00992698)
+* [Policy Gradient](https://homes.cs.washington.edu/~todorov/courses/amath579/reading/PolicyGradient.pdf)
+* [Monte Carlo Tree Search](http://mcts.ai/pubs/mcts-survey-master.pdf)
+* [Deep Q Network](https://www.cs.toronto.edu/~vmnih/docs/dqn.pdf)
+* [Approximate Policy Iteration](https://link.springer.com/article/10.1007/s11768-011-1005-3)
+* [DeepMind StarCraft II](https://arxiv.org/abs/1708.04782)
