@@ -32,3 +32,9 @@
         * Add more data
         * Relax regularization/dropout
         * Increase model complexity (layers, nodes)
+
+## Transfer Learning
+* **Similar & small dataset**: avoid overfitting by not fine-tuning the weights on a small dataset, and use extracted features from the highest levels of the ConvNet to leverage dataset similarity.
+* **Different & small dataset**: avoid overfitting by not fine-tuning the weights on a small dataset, and use extracted features from lower levels of the ConvNet which are more generalizable.
+* **Similar & large dataset**: with a large dataset we can fine-tune the weights with less of a chance to overfit the training data.
+* **Different & large dataset**: with a large dataset we again can fine-tune the weights with less of a chance to overfit.
