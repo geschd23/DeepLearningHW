@@ -11,7 +11,7 @@ def original_model(filters, linear_nodes, regularizer, dropout_rate):
         - is_training: boolean scalar tensor
     """
     input = tf.placeholder(tf.float32, [None, 16641], name='input_placeholder')
-    is_training = tf.placeholder(tf.bool, name='is_training')
+    is_training = tf.placeholder_with_default(False, [], name='is_training')
     input2D = tf.reshape(input, [-1, 129, 129, 1])
     conv_module = conv_block(input2D, filters=filters, regularizer=regularizer, dropout_rate=dropout_rate, is_training=is_training)
     conv_out = tf.identity(conv_module, name='transfer_point')
@@ -35,10 +35,10 @@ def transfer_model(transfer, filters, linear_nodes, regularizer, dropout_rate):
     saver.restore(session, transfer)
     graph = session.graph
     input = graph.get_tensor_by_name('input_placeholder:0')
-    is_training = graph.get_tensor_by_name('is_training:0')
+    is_training = tf.placeholder_with_default(False, [], name='is_training')
     conv_out = graph.get_tensor_by_name('transfer_point:0')
-    stop_grad = tf.stop_gradient(conv_out)
-    denseOut = classification_end(stop_grad, linear_nodes=linear_nodes, regularizer=regularizer, dropout_rate=dropout_rate, is_training=is_training)
+    with tf.name_scope('new_layers') as scope:
+        denseOut = classification_end(conv_out, linear_nodes=linear_nodes, regularizer=regularizer, dropout_rate=dropout_rate, is_training=is_training)
     output = tf.identity(denseOut, name='output2')
     return (input, output, is_training)
 
