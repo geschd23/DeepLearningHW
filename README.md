@@ -16,13 +16,7 @@
 * Use pre-trained model on large datasets and finetune it for our purpose, instead of training it from scratch
 * Use k-fold cross validation to avoid statistical error on performance, especially when the amount of data available is small
 * Data augmentation (especially useful on images):
-    * Rotation
-    * Scale
-    * Shift
-    * Shearing
-    * Horizontal flip
-    * Vertical flip
-    * Noise
+    * Rotation / Scale / Shift / Shearing / Horizontal flip / Vertical flip / Noise
 * Overfitting vs. Underfitting:
     * Overfitting: Good performance on the training set, but poor performance on the validation set. 
         * Add more data
@@ -52,3 +46,6 @@
 * [Deep Q Network](https://www.cs.toronto.edu/~vmnih/docs/dqn.pdf)
 * [Approximate Policy Iteration](https://link.springer.com/article/10.1007/s11768-011-1005-3)
 * [DeepMind StarCraft II](https://arxiv.org/abs/1708.04782)
+* [MSC: A Dataset for Macro-Management in StarCraft II](https://arxiv.org/abs/1710.03131)
+* [AlphaGo](https://www.nature.com/articles/nature16961)
+* [AlphaZero](https://www.nature.com/articles/nature24270)
