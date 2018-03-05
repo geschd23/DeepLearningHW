@@ -11,15 +11,15 @@ def original_model(filters, linear_nodes, regularizer, dropout_rate):
         - is_training: boolean scalar tensor
     """
     input = tf.placeholder(tf.float32, [None, 16641], name='input_placeholder')
-    is_training = tf.placeholder(tf.bool, name='is_training')
+    is_training = tf.placeholder_with_default(False, [], name='is_training')
     input2D = tf.reshape(input, [-1, 129, 129, 1])
     conv_module = conv_block(input2D, filters=filters, regularizer=regularizer, dropout_rate=dropout_rate, is_training=is_training)
     conv_out = tf.identity(conv_module, name='transfer_point')
     denseOut = classification_end(conv_out, linear_nodes=linear_nodes, regularizer=regularizer, dropout_rate=dropout_rate, is_training=is_training)
     output = tf.identity(denseOut, name='output')
     return (input, output, is_training)
-    
-    
+
+
 def transfer_model(transfer, filters, linear_nodes, regularizer, dropout_rate):
     """
     Args:
@@ -35,10 +35,10 @@ def transfer_model(transfer, filters, linear_nodes, regularizer, dropout_rate):
     saver.restore(session, transfer)
     graph = session.graph
     input = graph.get_tensor_by_name('input_placeholder:0')
-    is_training = graph.get_tensor_by_name('is_training:0')
+    is_training = tf.placeholder_with_default(False, [], name='is_training')
     conv_out = graph.get_tensor_by_name('transfer_point:0')
-    stop_grad = tf.stop_gradient(conv_out)
-    denseOut = classification_end(stop_grad, linear_nodes=linear_nodes, regularizer=regularizer, dropout_rate=dropout_rate, is_training=is_training)
+    with tf.variable_scope('new_layers'):
+        denseOut = classification_end(conv_out, linear_nodes=linear_nodes, regularizer=regularizer, dropout_rate=dropout_rate, is_training=is_training)
     output = tf.identity(denseOut, name='output2')
     return (input, output, is_training)
 
@@ -53,7 +53,7 @@ def conv_block(inputs, filters, regularizer, dropout_rate, is_training):
         - dropout_rate: chance of dropping a node
         - is_training: boolean scalar tensor
     """
-    with tf.name_scope('conv_block') as scope:
+    with tf.variable_scope('conv_block'):
         x = inputs
         for i in range(len(filters)):
             x = tf.layers.dropout(x, dropout_rate, training=is_training)
@@ -77,7 +77,7 @@ def classification_end(x, linear_nodes, regularizer, dropout_rate, is_training):
     """
     flatten_dim = np.prod(x.get_shape().as_list()[1:])
     x = tf.reshape(x, [-1, flatten_dim])
-    with tf.name_scope('linear') as scope:
+    with tf.variable_scope('linear'):
         for i in range(len(linear_nodes)):
             x = tf.layers.dropout(x, dropout_rate, training=is_training)
             x = tf.layers.dense(x, linear_nodes[i], kernel_regularizer=regularizer, bias_regularizer=regularizer)
@@ -97,7 +97,7 @@ def dense_block(inputs, layers, k, bottleneck, dropout_rate, is_training):
         - dropout_rate: chance of dropping a node
         - is_training: boolean scalar tensor
     """
-    with tf.name_scope('dense_block') as scope:
+    with tf.variable_scope('dense_block') as scope:
         concatenation = inputs
         for i in range(layers):
             x = concatenation
@@ -121,7 +121,7 @@ def transition_layer(inputs, compression, dropout_rate, is_training):
         - dropout_rate: chance of dropping a node
         - is_training: boolean scalar tensor
     """
-    with tf.name_scope('transition_layer') as scope:
+    with tf.variable_scope('transition_layer') as scope:
         x = tf.layers.batch_normalization(inputs, training=is_training)
         numFilters = tf.floor(tf.shape(inputs)[3]*compression)
         x = tf.layers.conv2d(x, numFilters, 1, 1, padding='same')
