@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 
-for f in $(ls $1/*.out);
+for f in $(find $1 -name *.txt);
 do
 	echo -n "$f, "
-	for l in $(cat $f | grep "regularizer\|dropout_rate\|learning_rate\|filters\|linear_nodes\|Final VALIDATION ACCURACY\|Average accuracy across k folds" | sed 's/ //g');
+	for l in $(cat $f | grep "regularizer\|dropout_rate\|learning_rate\|filters\|code_size\|Final VALIDATION PSNR\|Average psnr across k folds" | sed 's/ //g');
 	do
 		echo -n '"'
 		echo -n $l | sed 's/.*://g';

@@ -13,7 +13,6 @@ def split_data(data, proportion): #function taken from hackathon_3 notebook and 
         - val: numpy array; used for validation
     """
     size = data.shape[0]
-    np.random.seed(42)
     s = np.random.permutation(size)
     split_idx = int(proportion * size)
     train = data[s[:split_idx]]
