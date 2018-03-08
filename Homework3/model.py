@@ -1,55 +1,90 @@
 import tensorflow as tf
 import numpy as np
 
-def encoder(code_size):
+def dense(input, nodes, regularizer, dropout_rate, training) : 
+    x = tf.layers.dropout(input, dropout_rate, training=training)
+    x = tf.layers.dense(x, nodes)
+    #x = tf.layers.batch_normalization(x, training=training)
+    x = tf.nn.elu(x)
+    return x
+
+def convolution(input, filters, regularizer, dropout_rate, training) : 
+    x = tf.layers.dropout(input, dropout_rate, training=training)
+    x = tf.layers.conv2d(x, filters, 3, 1, padding='same', kernel_regularizer=regularizer, bias_regularizer=regularizer)
+    #x = tf.layers.batch_normalization(x, training=training)
+    x = tf.nn.elu(x)
+    return x
+
+def deconvolution(input, filters, regularizer, dropout_rate, training) : 
+    x = tf.layers.dropout(input, dropout_rate, training=training)
+    x = tf.layers.conv2d_transpose(x, filters, 3, 1, padding='same', kernel_regularizer=regularizer, bias_regularizer=regularizer)
+    #x = tf.layers.batch_normalization(x, training=training)
+    x = tf.nn.elu(x)
+    return x
+
+def encoder(filters, code_size, regularizer, dropout_rate):
+    """
+    Args:
+        - code_size: number of nodes in code layer
+        - filters: number of filters per convolution
+        - regularizer: the regularizer to use
+        - dropout_rate: chance of dropping a node
+    """
     input = tf.placeholder(tf.float32, [None, 32, 32, 3], name='encoder_input')
     training = tf.placeholder_with_default(False, [], name='encoder_training')
     
     with tf.variable_scope('encoder'):
         x = input
-        x = tf.layers.max_pooling2d(x, 2, 2, padding='same')
-        flatten_dim = np.prod(x.get_shape().as_list()[1:])
-        x = tf.reshape(x, [-1, flatten_dim])
-        x = tf.layers.dense(x, code_size)
-        x = tf.nn.elu(x)
+        for i in range(len(filters)):
+            if filters[i]==0:
+                x = tf.layers.max_pooling2d(x, 2, 2, padding='same')
+            else:
+                x = convolution(x, filters[i], regularizer, dropout_rate, training)
+        precode_shape = x.get_shape().as_list()
+        x = tf.reshape(x, [-1, np.prod(precode_shape[1:])])
+        x = dense(x, code_size, regularizer, dropout_rate, training)
         
     output = tf.identity(x, name='encoder_output')
-    return (input, output, training, flatten_dim)
+    return (input, output, training, precode_shape)
 
-def decoder(code_size, encoder_output, flatten_dim):
+def decoder(encoder_output, postcode_shape, filters, regularizer, dropout_rate):
+    """
+    Args:
+        - encoder_output: output tensor from decoder
+        - postcode_shape: shape to reshape tensor to after code layer
+        - filters: number of filters per convolution
+        - regularizer: the regularizer to use
+        - dropout_rate: chance of dropping a node
+    """
     input = tf.identity(encoder_output, name='decoder_input')
     training = tf.placeholder_with_default(False, [], name='decoder_training')
     
     with tf.variable_scope('decoder'):
         x = input
-        x = tf.layers.dense(x, flatten_dim)
-        x = tf.nn.elu(x)
-        x = tf.reshape(x, [-1, 16, 16, 3])
-        x = tf.layers.conv2d_transpose(x, 3, 3, strides=(2, 2), padding='same')
+        x = dense(x, np.prod(postcode_shape[1:]), regularizer, dropout_rate, training)
+        x = tf.reshape(x, [-1, postcode_shape[1], postcode_shape[2], postcode_shape[3]])
+        for i in reversed(range(len(filters))):
+            if filters[i]==0:
+                x = tf.image.resize_nearest_neighbor(x, [x.get_shape().as_list()[1]*2, x.get_shape().as_list()[2]*2])
+            else:
+                x = deconvolution(x, filters[i], regularizer, dropout_rate, training)
+        x = deconvolution(x, 3, regularizer, dropout_rate, training)
         
     output = tf.identity(x, name='decoder_output')
     return (input, output, training)
 
-# Based on function provided in Hackathon 5
-def conv_block(inputs, filters, regularizer, dropout_rate, is_training):
+def psnr(original, reconstruction):
     """
     Args:
-        - inputs: 4D tensor of shape NHWC
-        - filters: iterable of ints
-        - regularizer: the regularizer to use
-        - dropout_rate: chance of dropping a node
-        - is_training: boolean scalar tensor
+        - original: 4D tensor of shape NHWC, the original image
+        - reconstruction: 4D tensor of shape NHWC, the reconstructed image
     """
-    with tf.variable_scope('conv_block'):
-        x = inputs
-        for i in range(len(filters)):
-            x = tf.layers.dropout(x, dropout_rate, training=is_training)
-            if filters[i]==0:
-                x = tf.layers.max_pooling2d(x, 2, 2, padding='same')
-            else:
-                x = tf.layers.conv2d(x, filters[i], 3, 1, padding='same', kernel_regularizer=regularizer, bias_regularizer=regularizer)
-                x = tf.layers.batch_normalization(x, training=is_training)
-                x = tf.nn.elu(x)
+    with tf.variable_scope('psnr') as scope:
+        x = tf.losses.mean_squared_error(original, reconstruction, reduction = tf.losses.Reduction.NONE)
+        x = tf.reduce_mean(x, axis=3)
+        x = tf.reduce_mean(x, axis=2)
+        x = tf.reduce_mean(x, axis=1)
+        x = 20.0 * tf.log(255.0) / tf.log(10.0) - 10.0 * tf.log(x) / tf.log(10.0)
     return x
 
 # Based on "Densely Connected Convolutional Networks" by Huang et al.
@@ -92,19 +127,4 @@ def transition_layer(inputs, compression, dropout_rate, is_training):
         numFilters = tf.floor(tf.shape(inputs)[3]*compression)
         x = tf.layers.conv2d(x, numFilters, 1, 1, padding='same')
         x = tf.layers.average_pooling2d(x, 2, 2, padding='same')
-    return x
-
-def psnr(original, reconstruction):
-    """
-    Args:
-        - original: 4D tensor of shape NHWC, the original image
-        - reconstruction: 4D tensor of shape NHWC, the reconstructed image
-    """
-    with tf.variable_scope('psnr') as scope:
-        #x = tf.losses.mean_squared_error(original, reconstruction)
-        x = tf.losses.mean_squared_error(original, reconstruction, reduction = tf.losses.Reduction.NONE)
-        x = tf.reduce_mean(x, axis=3)
-        x = tf.reduce_mean(x, axis=2)
-        x = tf.reduce_mean(x, axis=1)
-        x = 20.0 * tf.log(255.0) / tf.log(10.0) - 10.0 * tf.log(x) / tf.log(10.0)
     return x
