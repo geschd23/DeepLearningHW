@@ -1,7 +1,7 @@
 #!/bin/sh
 #SBATCH --time=02:00:00          # Run time in hh:mm:ss
 #SBATCH --mem=32000              # Maximum memory required (in megabytes)
-#SBATCH --job-name=DL-HW1
+#SBATCH --job-name=DL-HW2
 #SBATCH --partition=gpu
 #SBATCH --gres=gpu
 #SBATCH --constraint=[gpu_k20|gpu_k40|gpu_p100]

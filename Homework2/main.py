@@ -15,17 +15,19 @@ import model
 flags = tf.app.flags
 flags.DEFINE_string('data_dir', '/work/cse496dl/shared/homework/02/', 'directory where EMODB/SAVEE is located')
 flags.DEFINE_string('save_dir', 'model', 'directory where model graph and weights are saved')
+flags.DEFINE_string('dataset', 'EMODB-German', 'dataset to run on')
+flags.DEFINE_string('model_transfer', '', 'Where to load model to transfer from')
 flags.DEFINE_integer('batch_size', 32, '')
-flags.DEFINE_integer('max_epoch_num', 200, '')
-flags.DEFINE_integer('patience', 10, '')
-flags.DEFINE_string('filters', "32, 64, 128", '')
-flags.DEFINE_string('linear_nodes', "64, 64", '')
-flags.DEFINE_float('learning_rate', 0.0001, '')
-flags.DEFINE_float('dropout_rate', 0.0, '')
+flags.DEFINE_integer('max_epoch_num', 50, '')
+flags.DEFINE_integer('patience', 0, '')
+flags.DEFINE_string('filters', "2,0,4,0", '')
+flags.DEFINE_string('linear_nodes', "", '')
+flags.DEFINE_float('learning_rate', 0.001, '')
+flags.DEFINE_float('dropout_rate', 0.2, '')
 flags.DEFINE_bool('l2_regularizer', False, '')
 flags.DEFINE_bool('output_model', False, '')
 flags.DEFINE_float('data_fraction', 1.0, '')
-flags.DEFINE_integer('fold', 4, '')
+flags.DEFINE_integer('fold', 0, '')
 FLAGS = flags.FLAGS
 
 def main(argv):
@@ -39,17 +41,18 @@ def main(argv):
     print("linear_nodes:",FLAGS.linear_nodes)
     learning_rate = FLAGS.learning_rate
     dropout_rate = FLAGS.dropout_rate
-    filters = list(map(int, FLAGS.filters.split(",")))
-    linear_nodes = list(map(int, FLAGS.linear_nodes.split(",")))
+    filters = list(map(int, FLAGS.filters.split(","))) if FLAGS.filters != "" else []
+    linear_nodes = list(map(int, FLAGS.linear_nodes.split(","))) if FLAGS.linear_nodes != "" else []
     regularizer = tf.contrib.layers.l2_regularizer(scale=1.) if FLAGS.l2_regularizer else None
+    folds = range(1,5) if FLAGS.fold == 0 else [FLAGS.fold]
+    modelFile = "emodb_homework_2" if FLAGS.dataset == "EMODB-German" else "savee_homework_2"
+     
     
     # specify the network
-    input = tf.placeholder(tf.float32, [None, 16641], name='input_placeholder')
-    input2D = tf.reshape(input, [-1, 129, 129, 1])
-    trainingMode = tf.placeholder(tf.bool)
-    conv_module = model.conv_block(input2D, filters=filters, dropout_rate=dropout_rate, is_training=trainingMode)
-    denseOut = model.classification_end(conv_module, linear_nodes=linear_nodes, dropout_rate=dropout_rate, is_training=trainingMode)
-    output = tf.identity(denseOut, name='output')
+    if FLAGS.model_transfer == "":
+        input, output, trainingMode = model.original_model(filters=filters, linear_nodes=linear_nodes, regularizer=regularizer, dropout_rate=dropout_rate)
+    else:
+        input, output, trainingMode = model.transfer_model(transfer=FLAGS.model_transfer, filters=filters, linear_nodes=linear_nodes, regularizer=regularizer, dropout_rate=dropout_rate)
 
     # define classification loss
     label = tf.placeholder(tf.uint8, [None, 7], name='label')
@@ -71,17 +74,19 @@ def main(argv):
     saver = tf.train.Saver()
     
     k_fold_accuracy = []
-    
-    for fold in range(FLAGS.fold):
+
+    for fold in folds:
         print("Beginning fold ", fold)
         
         # load data
-        train_images = np.load(FLAGS.data_dir + 'EMODB-German/train_x_' + str(fold+1) + '.npy')
-        train_labels = np.load(FLAGS.data_dir + 'EMODB-German/train_y_' + str(fold+1) + '.npy')
-        validation_images = np.load(FLAGS.data_dir + 'EMODB-German/test_x_' + str(fold+1) + '.npy')
-        validation_labels = np.load(FLAGS.data_dir + 'EMODB-German/test_y_' + str(fold+1) + '.npy')
+        train_images = np.load(FLAGS.data_dir + FLAGS.dataset + '/train_x_' + str(fold) + '.npy')
+        train_labels = np.load(FLAGS.data_dir + FLAGS.dataset + '/train_y_' + str(fold) + '.npy')
+        validation_images = np.load(FLAGS.data_dir + FLAGS.dataset + '/test_x_' + str(fold) + '.npy')
+        validation_labels = np.load(FLAGS.data_dir + FLAGS.dataset + '/test_y_' + str(fold) + '.npy')
         train_num_examples = train_images.shape[0]
         validation_num_examples = validation_images.shape[0]
+        print("train size = ", train_num_examples)
+        print("validation size = ", validation_num_examples)
         
         # reduce dataset according to data_fraction parameter
         train_images, _ = util.split_data(train_images, FLAGS.data_fraction)
@@ -90,9 +95,9 @@ def main(argv):
         validation_labels, _ = util.split_data(validation_labels, FLAGS.data_fraction)
 
         # set up early stopping
-        best_epoch = 0
-        best_validation_ce = math.inf
-        best_validation_acc = 0
+        final_epoch = 0
+        final_validation_ce = math.inf
+        final_validation_acc = 0
         patience = FLAGS.patience
         wait = 0
 
@@ -136,14 +141,14 @@ def main(argv):
                 print('VALIDATION CONFUSION MATRIX:')
                 print(str(sum(conf_mxs)))
 
-                # update best results
-                if avg_validation_acc > best_validation_acc:
-                    best_epoch = epoch
-                    best_validation_ce = avg_validation_ce
-                    best_validation_acc = avg_validation_acc
+                # update final results
+                if avg_validation_acc > final_validation_acc or patience == 0:
+                    final_epoch = epoch
+                    final_validation_ce = avg_validation_ce
+                    final_validation_acc = avg_validation_acc
                     wait = 0
                     if FLAGS.output_model:
-                        path_prefix = saver.save(session, os.path.join(FLAGS.save_dir, "homework_1"), global_step=0)
+                        path_prefix = saver.save(session, os.path.join(FLAGS.save_dir, modelFile), global_step=0)
                 else:
                     wait += 1
                     if wait == patience:
@@ -155,12 +160,12 @@ def main(argv):
 
             
             print("Results for fold", fold)
-            print('Best Epoch: ' + str(best_epoch))
-            print('Best VALIDATION CROSS ENTROPY: ' + str(best_validation_ce))
-            print('Best VALIDATION ACCURACY: ' + str(best_validation_acc))
-            k_fold_accuracy.append(best_validation_acc)
+            print('Final Epoch: ' + str(final_epoch))
+            print('Final VALIDATION CROSS ENTROPY: ' + str(final_validation_ce))
+            print('Final VALIDATION ACCURACY: ' + str(final_validation_acc))
+            k_fold_accuracy.append(final_validation_acc)
     
-    # report average best accuracy across all k folds
+    # report average final accuracy across all k folds
     print('Average accuracy across k folds: '+str(sum(k_fold_accuracy) / len(k_fold_accuracy)))
                 
         
