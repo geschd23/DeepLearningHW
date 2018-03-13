@@ -34,6 +34,11 @@ def np_array_to_img(nparray):
 def save_array(directory,npdata,outfilename):
     np.save(directory+"\\"+outfilename,npdata)
     return
+def resize_image(img):
+    size = 32,32
+    img = img.resize(size,Image.LANCZOS)
+    return img
+
 
 def process_image(des_dir):
     for directory_in_str in des_dir:
@@ -42,6 +47,7 @@ def process_image(des_dir):
             filename=os.fsdecode(file)
             if filename.endswith(".png") or filename.endswith(".jpg"):
                 image = load_image(des_dir,filename)
+                image = resize_image(image)
                 data = image_to_np_array(image)
                 save_array(des_dir,data,filename+"-array")
             else:
