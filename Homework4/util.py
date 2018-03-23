@@ -61,7 +61,8 @@ def load_glove(file):
         
     Returns:
         - embedding: the word embedding vectors unit normalized
-        - word_map: map from word to index
+        - word_map: dict from word to index
+        - indexed_words: dict from index to word
     """
     f = open(file,'r')
     words = sum(1 for line in open(file,'r'))
@@ -88,11 +89,20 @@ def load_glove(file):
     return embedding,word_map,indexed_words
 
 def normalize_vector(vector):
+    """
+    Normalizes the input vector
+    """
     return vector / np.linalg.norm(vector)
 
 def get_word_vector(embedding, word_map, word):
+    """
+    Retrieves the word's glove vector from the embedding
+    """
     return embedding[word_map[word]]
 
 def get_closest_word(embedding, indexed_words, vector):
+    """
+    Finds the closest match to the given vector in the embedding using cosine similarity
+    """
     temp = normalize_vector(vector)
     return indexed_words[np.argmax(np.dot(embedding,temp))]
