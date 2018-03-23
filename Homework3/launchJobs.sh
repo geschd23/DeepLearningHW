@@ -1,16 +1,20 @@
 #!/usr/bin/env bash
-
+dirID=$(ls | grep ^output | sed 's/output//g' | sort -n | tail -n 1)
+dirID=$((dirID +1))
 id=1
-for a in '--l2_regularizer 0.0' '--l2_regularizer 0.0001';
+for a in '--float16';
 do
-	for b in '--dropout_rate 0.0' '--dropout_rate 0.2';
+	for b in '--l2_regularizer 0.0' '--l2_regularizer 0.001';
 	do
-		for c in '--code_size 100' '--code_size 200';
+		for c in '--code_size 200';
 		do
-			for d in '--filters 2,0,4,0' '--filters 16,0,32,0' '--filters 2,2,0,4,4,0' '--filters 16,16,0,32,32,0';
+			for d in '--filters 8,16,32' '--filters 8,16,32,0,8,16,32' '--filters 8,16,32,0,8,16,32,0,8,16,32' ;
 			do
-				sbatch run_py.sh main.py $a $b $c $d --output_model --save_dir output/run$id
-				id=$((id +1))
+				for e in '--normalize';
+				do
+					sbatch run_py.sh main.py $a $b $c $d $e --output_model --save_dir output${dirID}/run${id}
+					id=$((id +1))
+				done
 			done
 		done
 	done
