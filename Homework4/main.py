@@ -1,9 +1,9 @@
 #---------------------------------------------------
 # Daniel Geschwender, Yanfeng Liu, Jeevan Rajagopal
 # CSCE 496/896: Deep Learning
-# Homework 3
+# Homework 4
 #---------------------------------------------------
-# Based off code provided in Hackathon 3
+# Based off code provided in Hackathon 3, 8, 9
 
 import tensorflow as tf
 import numpy as np
@@ -34,6 +34,7 @@ flags.DEFINE_float('data_fraction', 1.0, '')
 flags.DEFINE_integer('samples', 30, '')
 flags.DEFINE_integer('seed', 1, '')
 flags.DEFINE_integer('fold', 1, '')
+flags.DEFINE_string('glove', '', 'glove embedding file')
 FLAGS = flags.FLAGS
 
 def main(argv):
@@ -43,7 +44,24 @@ def main(argv):
     out = open(FLAGS.save_dir+'/output.txt', 'w')
     
     print_file(tf.__version__, file=out)
-
+    
+    embedding, word_map, indexed_words = util.load_glove(FLAGS.glove)
+    
+    king = util.get_word_vector(embedding,word_map,"king")
+    queen = util.get_word_vector(embedding,word_map,"queen")
+    man = util.get_word_vector(embedding,word_map,"man")
+    woman = util.get_word_vector(embedding,word_map,"woman")
+    good = util.get_word_vector(embedding,word_map,"good")
+    evil = util.get_word_vector(embedding,word_map,"evil")
+    
+    print(np.dot(queen, king))
+    print(np.dot(queen, king-man+woman))
+    print(np.dot(queen, king-woman+man))
+    print(np.dot(good, evil))
+    
+    word = util.get_closest_word(embedding,indexed_words,good+evil)
+    print(word)
+    
     # handle command line arguments
     print_file("normalize:" + str(FLAGS.normalize), file=out)
     print_file("regularizer:"+str(FLAGS.l2_regularizer), file=out)
@@ -62,10 +80,6 @@ def main(argv):
     data_type = tf.float16 if FLAGS.float16 else tf.float32
     folds = range(1,5) if FLAGS.fold == 0 else [FLAGS.fold]
     seed = None if FLAGS.seed == 0 else FLAGS.seed
-    modelFile1 = "maxquality_encoder_homework_3"
-    modelFile2 = "maxquality_decoder_homework_3"
-    modelFile3 = "maxcompression_encoder_homework_3"
-    modelFile4 = "maxcompression_decoder_homework_3"
     np.random.seed(seed)
 
     # specify the network

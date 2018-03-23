@@ -50,3 +50,49 @@ def print_file(string, file):
     """
     print(string)
     print(string, file=file)
+    
+def load_glove(file): 
+    """
+    Loads a glove file specifying a pretrained embedding
+    modified from code at https://stackoverflow.com/questions/37793118/load-pretrained-glove-vectors-in-python
+    
+    Args:
+        - file: the filename of the glove file
+        
+    Returns:
+        - embedding: the word embedding vectors unit normalized
+        - word_map: map from word to index
+    """
+    f = open(file,'r')
+    words = sum(1 for line in open(file,'r'))
+    dimensions = len(open(file,'r').readline().split())-1
+    
+    word_map = {}
+    indexed_words = {}
+    embedding = np.empty(shape=[words,dimensions])
+    
+    #grab the data
+    index = 0
+    for line in f:
+        splitLine = line.split()
+        word = splitLine[0]
+        word_map[word] = index
+        indexed_words[index] = word
+        embedding[index] = [float(val) for val in splitLine[1:]]
+        index += 1
+        
+    #normalize the vectors
+    norms = np.linalg.norm(embedding,axis=1)
+    embedding = embedding / norms[:,None]
+    
+    return embedding,word_map,indexed_words
+
+def normalize_vector(vector):
+    return vector / np.linalg.norm(vector)
+
+def get_word_vector(embedding, word_map, word):
+    return embedding[word_map[word]]
+
+def get_closest_word(embedding, indexed_words, vector):
+    temp = normalize_vector(vector)
+    return indexed_words[np.argmax(np.dot(embedding,temp))]

@@ -1,26 +1,6 @@
 import tensorflow as tf
 import numpy as np
 
-def dense(input, nodes, regularizer, dropout_rate, training) : 
-    x = tf.layers.dropout(input, dropout_rate, training=training)
-    x = tf.layers.dense(x, nodes)
-    #x = tf.layers.batch_normalization(x, training=training)
-    x = tf.nn.elu(x)
-    return x
-
-def convolution(input, filters, regularizer, dropout_rate, training) : 
-    x = tf.layers.dropout(input, dropout_rate, training=training)
-    x = tf.layers.conv2d(x, filters, 3, 1, padding='same', kernel_regularizer=regularizer, bias_regularizer=regularizer)
-    #x = tf.layers.batch_normalization(x, training=training)
-    x = tf.nn.elu(x)
-    return x
-
-def deconvolution(input, filters, regularizer, dropout_rate, training) : 
-    x = tf.layers.dropout(input, dropout_rate, training=training)
-    x = tf.layers.conv2d_transpose(x, filters, 3, 1, padding='same', kernel_regularizer=regularizer, bias_regularizer=regularizer)
-    #x = tf.layers.batch_normalization(x, training=training)
-    x = tf.nn.elu(x)
-    return x
 
 def encoder(filters, code_size, regularizer, dropout_rate, normalize, data_type):
     """
