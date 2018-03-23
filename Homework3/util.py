@@ -39,3 +39,14 @@ def k_fold_split(data, k, i): #function improved upon Paul Quint's draft
     second = data[(i+1)*t:]
     train = np.concatenate((first, second), axis = 0)
     return train, val
+
+def print_file(string, file):
+    """
+    Prints to the screen and a file
+
+    Args:
+        - string: string to print
+        - file: file to print to
+    """
+    print(string)
+    print(string, file=file)
