@@ -1,6 +1,7 @@
 # DeepLearningHW
 
 ## Reinforcement Learning
+* [Asynchronous Advantage Actor-Critic](https://medium.com/emergent-future/simple-reinforcement-learning-with-tensorflow-part-8-asynchronous-actor-critic-agents-a3c-c88f72a5e9f2)
 * [Q-Learning](https://link.springer.com/article/10.1007/BF00992698)
 * [Policy Gradient](https://homes.cs.washington.edu/~todorov/courses/amath579/reading/PolicyGradient.pdf)
 * [Monte Carlo Tree Search](http://mcts.ai/pubs/mcts-survey-master.pdf)
