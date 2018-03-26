@@ -9,4 +9,5 @@ def lstm(input, layer_nodes, batch_size):
                                        dtype=tf.float32)
     x = tf.layers.dense(x, input.get_shape().as_list()[2])
     x = tf.tanh(x)
+    x = x / tf.norm(x, axis=2, keep_dims=True)
     return x

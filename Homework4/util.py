@@ -106,3 +106,12 @@ def get_closest_word(embedding, indexed_words, vector):
     """
     temp = normalize_vector(vector)
     return indexed_words[np.argmax(np.dot(embedding,temp))]
+
+def get_sentence(embedding, indexed_words, sentence_vector):
+    """
+    Finds the closest match for each word in the sentence using cosine similarity
+    """
+    sentence = ""
+    for word in sentence_vector:
+        sentence += get_closest_word(embedding,indexed_words,word)+" "
+    return sentence
