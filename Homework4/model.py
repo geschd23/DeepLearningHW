@@ -17,6 +17,7 @@ def sentence_completion_rnn(encoder_input, decoder_input, layer_nodes, batch_siz
         decoder_multicell = tf.nn.rnn_cell.MultiRNNCell(decoder_layers)
         decoder_output, decoder_state = tf.nn.dynamic_rnn(cell=decoder_multicell,
                                            inputs=decoder_input,
+                                           initial_state=encoder_state,
                                            dtype=tf.float32)
     
     x = tf.layers.dense(decoder_output, encoder_input.get_shape().as_list()[2])
