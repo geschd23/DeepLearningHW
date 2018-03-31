@@ -83,6 +83,7 @@ def main(argv):
     
     # set up the training/validation data
     #data = np.random.randint(embedding.shape[0], size=(200, sentence_length))
+    data, _ = util.split_data(data, FLAGS.data_fraction)
     train, validation = util.split_data(data, 0.9)
     train_num_examples = train.shape[0]
     validation_num_examples = validation.shape[0]
@@ -147,7 +148,7 @@ def main(argv):
                 print_file('VALIDATION DISTANCE: ' + str(avg_validation_distance), file=out)
                 
                 # output example sentence
-                a,b,c,d = session.run([embedding_input, embedding_target, output, word_distances], {input_data: validation[0:1, :-prediction_length], decoder_data: np.zeros((batch_size, prediction_length)), target_data: validation[0:1,-prediction_length:]})
+                a,b,c,d = session.run([embedding_input, embedding_target, output, word_distances], {input_data: validation[0:1, :-prediction_length], decoder_data: np.zeros((1, prediction_length)), target_data: validation[0:1, -prediction_length:]})
                 print_file("EXAMPLE INPUT: "+util.get_sentence(embedding, indexed_words, a[0]), file=out)
                 print_file("EXAMPLE TARGET: "+util.get_sentence(embedding, indexed_words, b[0]), file=out)
                 print_file("EXAMPLE OUTPUT: "+util.get_sentence(embedding, indexed_words, c[0]), file=out)
