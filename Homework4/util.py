@@ -1,4 +1,41 @@
 import numpy as np
+import codecs
+import tensorflow as tf
+
+def load_data(inference_input_file, hparams=None): # from hackathon_9
+  """Load inference data."""
+  with codecs.getreader("utf-8")(
+      tf.gfile.GFile(inference_input_file, mode="rb")) as f:
+    inference_data = f.read().splitlines()
+
+  if hparams and hparams.inference_indices:
+    inference_data = [inference_data[i] for i in hparams.inference_indices]
+
+  return inference_data
+
+def parse_data(sentences, word_map, length):
+    data_array = np.empty(shape=[len(sentences),length], dtype=int)
+    i=0
+    for sentence in sentences:
+        words=sentence.split()
+        j=0
+        for word in words:
+            word = word.lower()
+            if word in word_map:
+                data_array[i][j] = word_map[word]
+                j+=1
+            else:
+                j=0
+            if j==length:
+                i+=1
+                break
+    return data_array[:i] 
+
+def setup_data(file, word_map, length):
+    src_data = load_data(file)
+    npArray = parse_data(src_data, word_map, length)
+    np.save("textData",npArray)
+    
 
 def split_data(data, proportion): #function taken from hackathon_3 notebook and improved by Jingchao Zhang
     """
@@ -64,9 +101,9 @@ def load_glove(file):
         - word_map: dict from word to index
         - indexed_words: dict from index to word
     """
-    f = open(file,'r')
-    words = sum(1 for line in open(file,'r'))
-    dimensions = len(open(file,'r').readline().split())-1
+    f = open(file,'r', encoding="utf-8")
+    words = sum(1 for line in open(file,'r', encoding="utf-8"))
+    dimensions = len(open(file,'r', encoding="utf-8").readline().split())-1
     
     word_map = {}
     indexed_words = {}
@@ -105,7 +142,8 @@ def get_closest_word(embedding, indexed_words, vector):
     Finds the closest match to the given vector in the embedding using cosine similarity
     """
     temp = normalize_vector(vector)
-    return indexed_words[np.argmax(np.dot(embedding,temp))]
+    word = indexed_words[np.argmax(np.dot(embedding,temp))]
+    return word
 
 def get_sentence(embedding, indexed_words, sentence_vector):
     """
