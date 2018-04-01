@@ -13,7 +13,6 @@ def split_data(data, proportion): #function taken from hackathon_3 notebook and 
         - val: numpy array; used for validation
     """
     size = data.shape[0]
-    np.random.seed(42)
     s = np.random.permutation(size)
     split_idx = int(proportion * size)
     train = data[s[:split_idx]]
@@ -40,3 +39,14 @@ def k_fold_split(data, k, i): #function improved upon Paul Quint's draft
     second = data[(i+1)*t:]
     train = np.concatenate((first, second), axis = 0)
     return train, val
+
+def print_file(string, file):
+    """
+    Prints to the screen and a file
+
+    Args:
+        - string: string to print
+        - file: file to print to
+    """
+    print(string)
+    print(string, file=file)
