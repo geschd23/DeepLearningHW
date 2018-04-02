@@ -19,7 +19,7 @@ flags.DEFINE_string('save_dir', 'model', 'directory where model graph and weight
 flags.DEFINE_string('dataset', '', 'dataset to run on')
 flags.DEFINE_integer('batch_size', 10, '')
 flags.DEFINE_integer('time_scale', 20, '')
-flags.DEFINE_integer('max_epoch_num', 50, '')
+flags.DEFINE_integer('max_epoch_num', 20, '')
 flags.DEFINE_integer('patience', 0, '')
 flags.DEFINE_string('nodes', "100", '')
 flags.DEFINE_float('learning_rate', 0.001, '')
@@ -42,7 +42,7 @@ def main(argv):
     #set up output file
     if not os.path.exists(FLAGS.save_dir):
         os.makedirs(FLAGS.save_dir)
-    out = open(FLAGS.save_dir+'/output.txt', 'w')
+    out = open(FLAGS.save_dir+'/output.txt', 'w', encoding="utf-8")
     
     print_file(tf.__version__, file=out)
         
@@ -101,7 +101,15 @@ def main(argv):
     mean_distances = tf.reduce_mean(sentence_distances)
     print(element_distances)
     print(sentence_distances)
-    total_loss = tf.square((-sentence_distances+1)*10)
+    total_loss = 1-sentence_distances
+    
+    # add regularization
+    vars = tf.trainable_variables()
+    l2s = []
+    for v in vars:
+        if 'bias' not in v.name:
+            l2s.append(tf.nn.l2_loss(v))
+    total_loss += FLAGS.l2_regularizer * tf.add_n(l2s)
     
     # set up training and saving functionality
     global_step_tensor = tf.get_variable('global_step', trainable=False, shape=[], initializer=tf.zeros_initializer)
@@ -122,6 +130,26 @@ def main(argv):
 
         with tf.Session() as session:
             session.run(tf.global_variables_initializer())
+            
+            
+            # report mean validation loss
+            distance_vals = []
+            for i in range(validation_num_examples // batch_size):
+                batch_xs = validation[i*batch_size:(i+1)*batch_size, :-prediction_length]
+                batch_ys = validation[i*batch_size:(i+1)*batch_size, -prediction_length:]
+                validation_distance = session.run(mean_distances, {input_data: batch_xs, decoder_data: np.zeros((batch_size, prediction_length)), target_data: batch_ys})
+                distance_vals.append(validation_distance)
+            avg_validation_distance = sum(distance_vals) / len(distance_vals)
+            print_file('VALIDATION DISTANCE: ' + str(avg_validation_distance), file=out)
+
+            # output example sentence
+            NUM_EXAMPLES = 5
+            a,b,c,d = session.run([embedding_input, embedding_target, output, word_distances], {input_data: validation[0:NUM_EXAMPLES, :-prediction_length], decoder_data: np.zeros((NUM_EXAMPLES, prediction_length)), target_data: validation[0:NUM_EXAMPLES, -prediction_length:]})
+            for i in range(NUM_EXAMPLES):
+                print_file("EXAMPLE INPUT: "+util.get_sentence(embedding, indexed_words, a[i]), file=out)
+                print_file("EXAMPLE TARGET: "+util.get_sentence(embedding, indexed_words, b[i]), file=out)
+                print_file("EXAMPLE OUTPUT: "+util.get_sentence(embedding, indexed_words, c[i]), file=out)
+                print_file("EXAMPLE SIMILARITY: "+str(d[i]), file=out)
             
             # run training
             for epoch in range(FLAGS.max_epoch_num):
@@ -146,13 +174,15 @@ def main(argv):
                     distance_vals.append(validation_distance)
                 avg_validation_distance = sum(distance_vals) / len(distance_vals)
                 print_file('VALIDATION DISTANCE: ' + str(avg_validation_distance), file=out)
-                
+
                 # output example sentence
-                a,b,c,d = session.run([embedding_input, embedding_target, output, word_distances], {input_data: validation[0:1, :-prediction_length], decoder_data: np.zeros((1, prediction_length)), target_data: validation[0:1, -prediction_length:]})
-                print_file("EXAMPLE INPUT: "+util.get_sentence(embedding, indexed_words, a[0]), file=out)
-                print_file("EXAMPLE TARGET: "+util.get_sentence(embedding, indexed_words, b[0]), file=out)
-                print_file("EXAMPLE OUTPUT: "+util.get_sentence(embedding, indexed_words, c[0]), file=out)
-                print_file("EXAMPLE SIMILARITY: "+str(d[0]), file=out)
+                NUM_EXAMPLES = 5
+                a,b,c,d = session.run([embedding_input, embedding_target, output, word_distances], {input_data: validation[0:NUM_EXAMPLES, :-prediction_length], decoder_data: np.zeros((NUM_EXAMPLES, prediction_length)), target_data: validation[0:NUM_EXAMPLES, -prediction_length:]})
+                for i in range(NUM_EXAMPLES):
+                    print_file("EXAMPLE INPUT: "+util.get_sentence(embedding, indexed_words, a[i]), file=out)
+                    print_file("EXAMPLE TARGET: "+util.get_sentence(embedding, indexed_words, b[i]), file=out)
+                    print_file("EXAMPLE OUTPUT: "+util.get_sentence(embedding, indexed_words, c[i]), file=out)
+                    print_file("EXAMPLE SIMILARITY: "+str(d[i]), file=out)
 
                 # update final results
                 if avg_validation_distance > final_validation_distance or patience == 0:
