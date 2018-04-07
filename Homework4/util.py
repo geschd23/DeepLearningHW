@@ -85,8 +85,9 @@ def print_file(string, file):
         - string: string to print
         - file: file to print to
     """
-    print(string)
-    print(string, file=file)
+    print(string.encode('utf-8'))
+    print(string.encode('utf-8'), file=file)
+    file.flush()
     
 def load_glove(file): 
     """
