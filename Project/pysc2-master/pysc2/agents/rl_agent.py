@@ -26,13 +26,14 @@ import copy
 from pysc2.agents import base_agent
 from pysc2.lib import actions
 
+from tensorflow.python.client import timeline
 
 
 class RlAgent(base_agent.BaseAgent):
     """A Deep RL agent for starcraft."""
     def __init__(self):
         super(RlAgent,self).__init__()
-        self.screen_input, self.minimap_input, self.player_input, self.single_select_input, self.action_mask, self.action_policy, self.param_policy, self.value, self.action_input, self.param_input, self.advantage_input, self.target_value_input, self.gradients, self.update_step, self.global_norm, self.clipped = model.sc2network(tf.train.RMSPropOptimizer(0.001), beta=0.5, eta=0.01, scope="local")
+        self.tensors = model.sc2network(tf.train.AdamOptimizer(0.001), beta=0.5, eta=0.01, scope="local")
         self.session = tf.Session()
         self.session.run(tf.global_variables_initializer())
         self.replay_buffer = []
@@ -51,13 +52,20 @@ class RlAgent(base_agent.BaseAgent):
             action_mask[0][i]=1
             
         feed_dict = {
-            self.screen_input: np.swapaxes(np.reshape(np.array(obs.observation["screen"]), [17,64,64,1]),0,3),
-            self.minimap_input: np.swapaxes(np.reshape(np.array(obs.observation["minimap"]), [7,64,64,1]),0,3),
-            self.player_input: np.swapaxes(np.reshape(np.array(obs.observation["player"]), [11,1]),0,1),
-            self.single_select_input: np.swapaxes(np.reshape(np.array(obs.observation["single_select"]), [7,1]),0,1),
-            self.action_mask: action_mask}
+            self.tensors["screen_input"]: np.swapaxes(np.reshape(np.array(obs.observation["screen"]), [17,64,64,1]),0,3),
+            self.tensors["minimap_input"]: np.swapaxes(np.reshape(np.array(obs.observation["minimap"]), [7,64,64,1]),0,3),
+            self.tensors["player_input"]: np.swapaxes(np.reshape(np.array(obs.observation["player"]), [11,1]),0,1),
+            self.tensors["single_select_input"]: np.swapaxes(np.reshape(np.array(obs.observation["single_select"]), [7,1]),0,1),
+            self.tensors["action_mask"]: action_mask}
         
-        action_policy, param_policy, value = self.session.run([self.action_policy, self.param_policy, self.value], feed_dict)
+        action_policy, param_policy, value = self.session.run([self.tensors["action_policy"], self.tensors["param_policy"], self.tensors["value"]], feed_dict)
+        
+        policy_dict = {}
+        for i in range(len(action_policy[0])):
+            if action_policy[0][i] != 0:
+                policy_dict[i] = round(action_policy[0][i],2)
+                
+        print("action policy: ", policy_dict)
            
         action = [[np.random.choice(range(len(action_policy[0])), p=action_policy[0])]]
         params = [[[np.random.choice(range(len(param[0])), p=param[0])]] for param in param_policy]  
@@ -71,18 +79,28 @@ class RlAgent(base_agent.BaseAgent):
         temp[1][0] = [params[1][0][0]//64, params[1][0][0]%64] # minimap
         temp[2][0] = [params[2][0][0]//64, params[2][0][0]%64] # screen2
         args = [temp[arg.id][0] for arg in self.action_spec.functions[function].args]
-        print("selected action: ",function, args)
+        print("selected action: ",function, args, "Value estimate: ", value)
               
         return actions.FunctionCall(function, args)
     
     def update(self):
-        print("update")
+        print("update - preparing data")
         
         if len(self.replay_buffer) == self.t_max: 
             R = self.replay_buffer[-1]["value"][0][0]
         else:
             R = 0
             
+        batch_screen_input = np.zeros((len(self.replay_buffer), 64, 64, 17))
+        batch_minimap_input = np.zeros((len(self.replay_buffer), 64, 64, 7))
+        batch_player_input = np.zeros((len(self.replay_buffer), 11))
+        batch_single_select_input = np.zeros((len(self.replay_buffer), 7))
+        batch_action_mask = np.zeros((len(self.replay_buffer), 524))
+        batch_action_input = np.zeros((len(self.replay_buffer), 1))
+        batch_param_input = [ np.zeros((len(self.replay_buffer), 1)) for i in range(len(self.tensors["param_input"])) ]
+        batch_advantage_input = np.zeros((len(self.replay_buffer), 1))
+        batch_target_value_input = np.zeros((len(self.replay_buffer), 1))
+                    
         for i in reversed(range(len(self.replay_buffer))):
             obs = self.replay_buffer[i]["obs"]
             action = self.replay_buffer[i]["action"]
@@ -91,24 +109,44 @@ class RlAgent(base_agent.BaseAgent):
             advantage = R - value
 
             action_mask = np.zeros([1,524])
-            for i in obs.observation["available_actions"]:
-                action_mask[0][i]=1
-            
-            feed_dict = {
-                self.screen_input: np.swapaxes(np.reshape(np.array(obs.observation["screen"]), [17,64,64,1]),0,3),
-                self.minimap_input: np.swapaxes(np.reshape(np.array(obs.observation["minimap"]), [7,64,64,1]),0,3),
-                self.player_input: np.swapaxes(np.reshape(np.array(obs.observation["player"]), [11,1]),0,1),
-                self.single_select_input: np.swapaxes(np.reshape(np.array(obs.observation["single_select"]), [7,1]),0,1),
-                self.action_mask: action_mask,
-                self.action_input: action,
-                self.advantage_input: [[advantage]],
-                self.target_value_input: [[R]]}
-            feed_dict.update({i: d for i, d in zip(self.param_input, params)})
-            
-            norm, clipped, _ = self.session.run([self.global_norm, self.clipped, self.update_step] , feed_dict)
-            print(norm, clipped)
+            for j in obs.observation["available_actions"]:
+                action_mask[0][j]=1
+                
+            batch_screen_input[i] = np.swapaxes(np.reshape(np.array(obs.observation["screen"]), [17,64,64,1]),0,3)[0]
+            batch_minimap_input[i] = np.swapaxes(np.reshape(np.array(obs.observation["minimap"]), [7,64,64,1]),0,3)[0]
+            batch_player_input[i] = np.swapaxes(np.reshape(np.array(obs.observation["player"]), [11,1]),0,1)[0]
+            batch_single_select_input[i] = np.swapaxes(np.reshape(np.array(obs.observation["single_select"]), [7,1]),0,1)[0]
+            batch_action_mask[i] = action_mask[0]
+            batch_action_input[i] = action[0]
+            for j in range(len(self.tensors["param_input"])):
+                batch_param_input[j][i] = params[j][0]
+            batch_advantage_input[i] = [advantage]
+            batch_target_value_input[i] = [R]
             
             # compute next return
             R = obs.reward + obs.discount*R
+            
+            
+        feed_dict = {
+            self.tensors["screen_input"]: batch_screen_input,
+            self.tensors["minimap_input"]: batch_minimap_input,
+            self.tensors["player_input"]: batch_player_input,
+            self.tensors["single_select_input"]: batch_single_select_input,
+            self.tensors["action_mask"]: batch_action_mask,
+            self.tensors["action_input"]: batch_action_input,
+            self.tensors["advantage_input"]: batch_advantage_input,
+            self.tensors["target_value_input"]: batch_target_value_input}
+        feed_dict.update({i: d for i, d in zip(self.tensors["param_input"], batch_param_input)})
+        
+        
+        print("update - adjusting parameters")      
+
+        policy_loss, entropy_loss, value_loss, total_loss, norm, clipped, _ = self.session.run([self.tensors["policy_loss"], self.tensors["entropy_loss"], self.tensors["value_loss"], self.tensors["total_loss"], self.tensors["global_norm"], self.tensors["clipped"], self.tensors["update_step"]] , feed_dict)
+        print("policy loss: ",policy_loss)
+        print("entropy loss: ",entropy_loss)
+        print("value loss: ",value_loss)
+        print("total loss: ",total_loss)
+        print(norm, clipped)
+            
             
         self.replay_buffer = []

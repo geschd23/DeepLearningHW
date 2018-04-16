@@ -32,7 +32,7 @@ def sc2network(optimizer, beta, eta, scope):
                 screen = screen_input
                 screen = convolution(screen, 16, 5, regularizer, dropout_rate, training)
                 screen = convolution(screen, 32, 3, regularizer, dropout_rate, training)
-
+            
             with tf.variable_scope('minimap'):
                 minimap = minimap_input
                 minimap = convolution(minimap, 16, 5, regularizer, dropout_rate, training)
@@ -168,8 +168,28 @@ def sc2network(optimizer, beta, eta, scope):
                     local_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope)
                     gradients = tf.gradients(total_loss, local_vars)
                     global_norm = tf.global_norm(local_vars)
-                    clipped_gradients, clipped = tf.clip_by_global_norm(gradients,1.0)
-                    update_step = optimizer.apply_gradients(zip(clipped_gradients, local_vars))
+                    clipped_gradients, clipped = tf.clip_by_global_norm(gradients,40.0)
+                    update_step = optimizer.minimize(total_loss)#apply_gradients(zip(gradients, local_vars))
                         
         
-    return (screen_input, minimap_input, player_input, single_select_input, action_mask, action_policy, param_policy, value, action_input, param_input, advantage_input, target_value_input, gradients, update_step, global_norm, clipped)
+    return {"screen_input": screen_input,
+            "minimap_input": minimap_input,
+            "player_input": player_input,
+            "single_select_input": single_select_input,
+            "action_mask": action_mask,
+            "action_policy": action_policy,
+            "param_policy": param_policy,
+            "value": value,
+            "action_input": action_input,
+            "param_input": param_input,
+            "advantage_input": advantage_input,
+            "target_value_input": target_value_input,
+            "gradients": gradients,
+            "update_step": update_step,
+            "global_norm": global_norm,
+            "clipped": clipped,
+            "policy_loss": policy_loss, 
+            "entropy_loss": entropy_loss, 
+            "value_loss": value_loss, 
+            "total_loss": total_loss
+            }
