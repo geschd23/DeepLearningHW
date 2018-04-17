@@ -42,8 +42,9 @@ def sc2network(optimizer, beta, eta, scope):
         with tf.variable_scope('state'):
             broadcast_player_input = tf.tile(tf.reshape(player_input, [-1,1,1,11]), [1, 64, 64, 1])
             broadcast_single_select_input = tf.tile(tf.reshape(single_select_input, [-1,1,1,7]), [1, 64, 64, 1])
-            full_state = tf.concat([screen, minimap, broadcast_player_input, broadcast_single_select_input], axis=3)
-            dense_state = dense(tf.contrib.layers.flatten(full_state), 256, regularizer, dropout_rate, training)
+            #full_state = tf.concat([screen, minimap, broadcast_player_input, broadcast_single_select_input], axis=3)
+            full_state = screen_input[:,:,:,5:6]
+            dense_state = dense(tf.contrib.layers.flatten(full_state), 10, regularizer, dropout_rate, training)
             
             
         with tf.variable_scope('value'):
@@ -167,9 +168,9 @@ def sc2network(optimizer, beta, eta, scope):
                 with tf.variable_scope('gradients'):
                     local_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope)
                     gradients = tf.gradients(total_loss, local_vars)
-                    global_norm = tf.global_norm(local_vars)
-                    clipped_gradients, clipped = tf.clip_by_global_norm(gradients,40.0)
-                    update_step = optimizer.minimize(total_loss)#apply_gradients(zip(gradients, local_vars))
+                    #global_norm = tf.global_norm(local_vars)
+                    #clipped_gradients, clipped = tf.clip_by_global_norm(gradients,40.0)
+                    update_step = optimizer.apply_gradients(zip(gradients, local_vars))
                         
         
     return {"screen_input": screen_input,
@@ -186,8 +187,8 @@ def sc2network(optimizer, beta, eta, scope):
             "target_value_input": target_value_input,
             "gradients": gradients,
             "update_step": update_step,
-            "global_norm": global_norm,
-            "clipped": clipped,
+            #"global_norm": global_norm,
+            #"clipped": clipped,
             "policy_loss": policy_loss, 
             "entropy_loss": entropy_loss, 
             "value_loss": value_loss, 

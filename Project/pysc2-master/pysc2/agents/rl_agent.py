@@ -65,6 +65,12 @@ class RlAgent(base_agent.BaseAgent):
             if action_policy[0][i] != 0:
                 policy_dict[i] = round(action_policy[0][i],2)
                 
+        np.set_printoptions(threshold='nan')
+        for x in feed_dict[self.tensors["screen_input"]][:,:,:,5]:
+            for row in x: 
+                for elem in row: 
+                    print(elem, end='')
+                print("")
         print("action policy: ", policy_dict)
            
         action = [[np.random.choice(range(len(action_policy[0])), p=action_policy[0])]]
@@ -141,12 +147,11 @@ class RlAgent(base_agent.BaseAgent):
         
         print("update - adjusting parameters")      
 
-        policy_loss, entropy_loss, value_loss, total_loss, norm, clipped, _ = self.session.run([self.tensors["policy_loss"], self.tensors["entropy_loss"], self.tensors["value_loss"], self.tensors["total_loss"], self.tensors["global_norm"], self.tensors["clipped"], self.tensors["update_step"]] , feed_dict)
+        policy_loss, entropy_loss, value_loss, total_loss, norm, clipped, _ = self.session.run([self.tensors["policy_loss"], self.tensors["entropy_loss"], self.tensors["value_loss"], self.tensors["total_loss"], self.tensors["value_loss"], self.tensors["value_loss"], self.tensors["update_step"]] , feed_dict)
         print("policy loss: ",policy_loss)
         print("entropy loss: ",entropy_loss)
         print("value loss: ",value_loss)
         print("total loss: ",total_loss)
         print(norm, clipped)
-            
-            
+                       
         self.replay_buffer = []
