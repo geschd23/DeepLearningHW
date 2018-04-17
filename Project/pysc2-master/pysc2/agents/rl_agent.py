@@ -25,6 +25,7 @@ import copy
 
 from pysc2.agents import base_agent
 from pysc2.lib import actions
+from pysc2.env import environment
 
 from tensorflow.python.client import timeline
 
@@ -37,7 +38,7 @@ class RlAgent(base_agent.BaseAgent):
         self.session = tf.Session()
         self.session.run(tf.global_variables_initializer())
         self.replay_buffer = []
-        self.t_max = 40
+        self.t_max = -1
         print("constructing agent", id(self))
         print("Network parameters", np.sum([np.prod(v.get_shape().as_list()) for v in tf.trainable_variables()]))
 
@@ -65,12 +66,6 @@ class RlAgent(base_agent.BaseAgent):
             if action_policy[0][i] != 0:
                 policy_dict[i] = round(action_policy[0][i],2)
                 
-        np.set_printoptions(threshold='nan')
-        for x in feed_dict[self.tensors["screen_input"]][:,:,:,5]:
-            for row in x: 
-                for elem in row: 
-                    print(elem, end='')
-                print("")
         print("action policy: ", policy_dict)
            
         action = [[np.random.choice(range(len(action_policy[0])), p=action_policy[0])]]
@@ -81,18 +76,23 @@ class RlAgent(base_agent.BaseAgent):
         function = action[0][0]
         # handle spatial params
         temp = copy.deepcopy(params)
-        temp[0][0] = [params[0][0][0]//64, params[0][0][0]%64] # screen
-        temp[1][0] = [params[1][0][0]//64, params[1][0][0]%64] # minimap
-        temp[2][0] = [params[2][0][0]//64, params[2][0][0]%64] # screen2
+        temp[0][0] = [params[0][0][0]%64, params[0][0][0]//64] # screen
+        temp[1][0] = [params[1][0][0]%64, params[1][0][0]//64] # minimap
+        temp[2][0] = [params[2][0][0]%64, params[2][0][0]//64] # screen2
         args = [temp[arg.id][0] for arg in self.action_spec.functions[function].args]
         print("selected action: ",function, args, "Value estimate: ", value)
               
         return actions.FunctionCall(function, args)
+
+    def reset(self):
+        super(RlAgent, self).reset()
+        if len(self.replay_buffer) > 0:
+            self.update()
     
     def update(self):
         print("update - preparing data")
         
-        if len(self.replay_buffer) == self.t_max: 
+        if self.replay_buffer[-1]["obs"].step_type != environment.StepType.LAST: 
             R = self.replay_buffer[-1]["value"][0][0]
         else:
             R = 0
