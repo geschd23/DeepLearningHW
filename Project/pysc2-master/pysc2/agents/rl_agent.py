@@ -35,6 +35,13 @@ class RlAgent(base_agent.BaseAgent):
     def __init__(self):
         super(RlAgent,self).__init__()
         self.tensors = model.sc2network(tf.train.AdamOptimizer(0.001), beta=0.5, eta=0.01, scope="local")
+        self.normalization = {
+        "screen_input":[[[[256,4,2,2,17,5,1850,2,1600,256,1000,256,1000,256,16,256,16]]]],
+        "minimap_input":[[[[256,4,2,2,17,5,2]]]],
+        "player_input":[[1,1,1,1,1,1,1,1,1,1,1]], # unsure how to normalize
+        "single_select_input":[[1850,5,1600,1000,1000,100,100]],
+        "game_loop_input":[[2000]],
+        }
         self.session = tf.Session()
         self.session.run(tf.global_variables_initializer())
         self.replay_buffer = []
@@ -53,11 +60,11 @@ class RlAgent(base_agent.BaseAgent):
             action_mask[0][i]=1
             
         feed_dict = {
-            self.tensors["screen_input"]: np.swapaxes(np.reshape(np.array(obs.observation["screen"]), [17,64,64,1]),0,3),
-            self.tensors["minimap_input"]: np.swapaxes(np.reshape(np.array(obs.observation["minimap"]), [7,64,64,1]),0,3),
-            self.tensors["player_input"]: np.swapaxes(np.reshape(np.array(obs.observation["player"]), [11,1]),0,1),
-            self.tensors["single_select_input"]: np.swapaxes(np.reshape(np.array(obs.observation["single_select"]), [7,1]),0,1),
-            self.tensors["game_loop_input"]: np.swapaxes(np.reshape(np.array(obs.observation["game_loop"]), [1,1]),0,1)/2000,
+            self.tensors["screen_input"]: np.swapaxes(np.reshape(np.array(obs.observation["screen"]), [17,64,64,1]),0,3) / self.normalization["screen_input"],
+            self.tensors["minimap_input"]: np.swapaxes(np.reshape(np.array(obs.observation["minimap"]), [7,64,64,1]),0,3) / self.normalization["minimap_input"],
+            self.tensors["player_input"]: np.swapaxes(np.reshape(np.array(obs.observation["player"]), [11,1]),0,1) / self.normalization["player_input"],
+            self.tensors["single_select_input"]: np.swapaxes(np.reshape(np.array(obs.observation["single_select"]), [7,1]),0,1) / self.normalization["single_select_input"],
+            self.tensors["game_loop_input"]: np.swapaxes(np.reshape(np.array(obs.observation["game_loop"]), [1,1]),0,1) / self.normalization["game_loop_input"],
             self.tensors["action_mask"]: action_mask}
         
         action_policy, param_policy, value = self.session.run([self.tensors["action_policy"], self.tensors["param_policy"], self.tensors["value"]], feed_dict)
@@ -124,7 +131,7 @@ class RlAgent(base_agent.BaseAgent):
             batch_minimap_input[i] = np.swapaxes(np.reshape(np.array(obs.observation["minimap"]), [7,64,64,1]),0,3)[0]
             batch_player_input[i] = np.swapaxes(np.reshape(np.array(obs.observation["player"]), [11,1]),0,1)[0]
             batch_single_select_input[i] = np.swapaxes(np.reshape(np.array(obs.observation["single_select"]), [7,1]),0,1)[0]
-            batch_game_loop_input[i] = np.swapaxes(np.reshape(np.array(obs.observation["game_loop"]), [1,1]),0,1)[0]/2000
+            batch_game_loop_input[i] = np.swapaxes(np.reshape(np.array(obs.observation["game_loop"]), [1,1]),0,1)[0]
             batch_action_mask[i] = action_mask[0]
             batch_action_input[i] = action[0]
             for j in range(len(self.tensors["param_input"])):
@@ -136,11 +143,11 @@ class RlAgent(base_agent.BaseAgent):
             R = obs.reward + obs.discount*R
             
         feed_dict = {
-            self.tensors["screen_input"]: batch_screen_input,
-            self.tensors["minimap_input"]: batch_minimap_input,
-            self.tensors["player_input"]: batch_player_input,
-            self.tensors["single_select_input"]: batch_single_select_input,
-            self.tensors["game_loop_input"]: batch_game_loop_input,
+            self.tensors["screen_input"]: batch_screen_input / self.normalization["screen_input"],
+            self.tensors["minimap_input"]: batch_minimap_input / self.normalization["minimap_input"],
+            self.tensors["player_input"]: batch_player_input / self.normalization["player_input"],
+            self.tensors["single_select_input"]: batch_single_select_input / self.normalization["single_select_input"],
+            self.tensors["game_loop_input"]: batch_game_loop_input / self.normalization["game_loop_input"],
             self.tensors["action_mask"]: batch_action_mask,
             self.tensors["action_input"]: batch_action_input,
             self.tensors["advantage_input"]: batch_advantage_input,
