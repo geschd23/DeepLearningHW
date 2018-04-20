@@ -57,6 +57,7 @@ class RlAgent(base_agent.BaseAgent):
             self.tensors["minimap_input"]: np.swapaxes(np.reshape(np.array(obs.observation["minimap"]), [7,64,64,1]),0,3),
             self.tensors["player_input"]: np.swapaxes(np.reshape(np.array(obs.observation["player"]), [11,1]),0,1),
             self.tensors["single_select_input"]: np.swapaxes(np.reshape(np.array(obs.observation["single_select"]), [7,1]),0,1),
+            self.tensors["game_loop_input"]: np.swapaxes(np.reshape(np.array(obs.observation["game_loop"]), [1,1]),0,1)/2000,
             self.tensors["action_mask"]: action_mask}
         
         action_policy, param_policy, value = self.session.run([self.tensors["action_policy"], self.tensors["param_policy"], self.tensors["value"]], feed_dict)
@@ -101,6 +102,7 @@ class RlAgent(base_agent.BaseAgent):
         batch_minimap_input = np.zeros((len(self.replay_buffer), 64, 64, 7))
         batch_player_input = np.zeros((len(self.replay_buffer), 11))
         batch_single_select_input = np.zeros((len(self.replay_buffer), 7))
+        batch_game_loop_input = np.zeros((len(self.replay_buffer), 1))
         batch_action_mask = np.zeros((len(self.replay_buffer), 524))
         batch_action_input = np.zeros((len(self.replay_buffer), 1))
         batch_param_input = [ np.zeros((len(self.replay_buffer), 1)) for i in range(len(self.tensors["param_input"])) ]
@@ -122,6 +124,7 @@ class RlAgent(base_agent.BaseAgent):
             batch_minimap_input[i] = np.swapaxes(np.reshape(np.array(obs.observation["minimap"]), [7,64,64,1]),0,3)[0]
             batch_player_input[i] = np.swapaxes(np.reshape(np.array(obs.observation["player"]), [11,1]),0,1)[0]
             batch_single_select_input[i] = np.swapaxes(np.reshape(np.array(obs.observation["single_select"]), [7,1]),0,1)[0]
+            batch_game_loop_input[i] = np.swapaxes(np.reshape(np.array(obs.observation["game_loop"]), [1,1]),0,1)[0]/2000
             batch_action_mask[i] = action_mask[0]
             batch_action_input[i] = action[0]
             for j in range(len(self.tensors["param_input"])):
@@ -132,12 +135,12 @@ class RlAgent(base_agent.BaseAgent):
             # compute next return
             R = obs.reward + obs.discount*R
             
-            
         feed_dict = {
             self.tensors["screen_input"]: batch_screen_input,
             self.tensors["minimap_input"]: batch_minimap_input,
             self.tensors["player_input"]: batch_player_input,
             self.tensors["single_select_input"]: batch_single_select_input,
+            self.tensors["game_loop_input"]: batch_game_loop_input,
             self.tensors["action_mask"]: batch_action_mask,
             self.tensors["action_input"]: batch_action_input,
             self.tensors["advantage_input"]: batch_advantage_input,

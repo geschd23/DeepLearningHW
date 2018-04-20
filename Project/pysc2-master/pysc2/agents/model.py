@@ -26,6 +26,7 @@ def sc2network(optimizer, beta, eta, scope):
             minimap_input = tf.placeholder(tf.float32, [None, 64, 64, 7], name='minimap_input')
             player_input = tf.placeholder(tf.float32, [None, 11], name='player_input')
             single_select_input = tf.placeholder(tf.float32, [None, 7], name='single_select_input')
+            game_loop_input = tf.placeholder(tf.float32, [None, 1], name='game_loop_input')
             action_mask = tf.placeholder(tf.float32, [None, 524], name='action_mask')
 
             with tf.variable_scope('screen'):
@@ -43,8 +44,9 @@ def sc2network(optimizer, beta, eta, scope):
             broadcast_player_input = tf.tile(tf.reshape(player_input, [-1,1,1,11]), [1, 64, 64, 1])
             broadcast_single_select_input = tf.tile(tf.reshape(single_select_input, [-1,1,1,7]), [1, 64, 64, 1])
             #full_state = tf.concat([screen, minimap, broadcast_player_input, broadcast_single_select_input], axis=3)
-            full_state = screen_input[:,:,:,5:6]
-            dense_state = dense(tf.contrib.layers.flatten(full_state), 10, regularizer, dropout_rate, training)
+            state_2d = screen_input[:,:,:,5:6]
+            state_1d = game_loop_input#tf.concat([single_select_input,game_loop_input], axis=1)
+            dense_state = dense(state_1d, 10, regularizer, dropout_rate, training)
             
             
         with tf.variable_scope('value'):
@@ -59,17 +61,17 @@ def sc2network(optimizer, beta, eta, scope):
                 action_policy = tf.nn.softmax(masked_action_logits)
 
             with tf.variable_scope('param_screen'):
-                param_screen_logits = convolution(full_state, 1, 1, regularizer, dropout_rate, training)
+                param_screen_logits = convolution(state_2d, 1, 1, regularizer, dropout_rate, training)
                 param_screen_logits = tf.contrib.layers.flatten(param_screen_logits)
                 param_screen_policy = tf.nn.softmax(param_screen_logits)
 
             with tf.variable_scope('param_minimap'):
-                param_minimap_logits = convolution(full_state, 1, 1, regularizer, dropout_rate, training)
+                param_minimap_logits = convolution(state_2d, 1, 1, regularizer, dropout_rate, training)
                 param_minimap_logits = tf.contrib.layers.flatten(param_minimap_logits)
                 param_minimap_policy = tf.nn.softmax(param_minimap_logits)
 
             with tf.variable_scope('param_screen2'):
-                param_screen2_logits = convolution(full_state, 1, 1, regularizer, dropout_rate, training)
+                param_screen2_logits = convolution(state_2d, 1, 1, regularizer, dropout_rate, training)
                 param_screen2_logits = tf.contrib.layers.flatten(param_screen2_logits)
                 param_screen2_policy = tf.nn.softmax(param_screen2_logits)
 
@@ -177,6 +179,7 @@ def sc2network(optimizer, beta, eta, scope):
             "minimap_input": minimap_input,
             "player_input": player_input,
             "single_select_input": single_select_input,
+            "game_loop_input": game_loop_input,
             "action_mask": action_mask,
             "action_policy": action_policy,
             "param_policy": param_policy,
