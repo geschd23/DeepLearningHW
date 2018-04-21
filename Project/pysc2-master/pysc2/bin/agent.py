@@ -71,6 +71,7 @@ flags.DEFINE_float("beta", 1.0, "The value loss weight")
 flags.DEFINE_float("eta", 1.0, "The entropy loss weight")
 flags.DEFINE_bool("use_advantage", True, "Whether to use advantage")
 flags.DEFINE_integer("t_max", -1, "Number of steps between updates")
+flags.DEFINE_integer("output", 1, "Controls the amount of output")
 
 
 def run_thread(agent_cls, map_name, visualize, id, params, lock, session, graph, optimizer):
@@ -104,6 +105,7 @@ def main(unused_argv):
 
   # Set up parameters
   params = {
+    "verbosity": FLAGS.output,
     "learning_rate": FLAGS.learning_rate,
     "beta": FLAGS.beta,
     "eta": FLAGS.eta,

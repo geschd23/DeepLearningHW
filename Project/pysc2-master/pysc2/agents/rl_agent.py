@@ -36,6 +36,7 @@ class RlAgent(base_agent.BaseAgent):
         super(RlAgent,self).__init__(id, params, lock, session, optimizer)
         self.id = id
         self.lock = lock
+        self.verbosity = params["verbosity"]
         print("Constructing agent", self.id)
         self.session = session
         self.graph = graph
@@ -53,6 +54,7 @@ class RlAgent(base_agent.BaseAgent):
         }
         self.replay_buffer = []
         self.t_max = params["t_max"]
+        self.last_score = 0
         print("Network parameters", np.sum([np.prod(v.get_shape().as_list()) for v in tf.trainable_variables()]))
 
     def step(self, obs):
@@ -82,8 +84,9 @@ class RlAgent(base_agent.BaseAgent):
         for i in range(len(action_policy[0])):
             if action_policy[0][i] != 0:
                 policy_dict[i] = round(action_policy[0][i],2)
-                
-        #print("action policy: ", policy_dict)
+
+        if self.verbosity >=4:
+            print("Agent", self.id, "action policy: ", policy_dict)
            
         action = [[np.random.choice(range(len(action_policy[0])), p=action_policy[0])]]
         params = [[[np.random.choice(range(len(param[0])), p=param[0])]] for param in param_policy]  
@@ -97,17 +100,26 @@ class RlAgent(base_agent.BaseAgent):
         temp[1][0] = [params[1][0][0]%64, params[1][0][0]//64] # minimap
         temp[2][0] = [params[2][0][0]%64, params[2][0][0]//64] # screen2
         args = [temp[arg.id][0] for arg in self.action_spec.functions[function].args]
-        #print("selected action: ",function, args, "Value estimate: ", value)
+
+        if self.verbosity >=3:
+            print("Agent", self.id, "selected action: ",function, args, "Value estimate: ", value)
               
         return actions.FunctionCall(function, args)
 
     def reset(self):
         super(RlAgent, self).reset()
+
         if len(self.replay_buffer) > 0:
+            if self.verbosity >=1:
+                print("Agent", self.id, "score on episode", self.episodes - 1, " = ", self.reward - self.last_score)
             self.update()
+
+        self.last_score = self.reward
     
     def update(self):
-        print("update - preparing data")
+
+        if self.verbosity >=2:
+            print("Agent", self.id, "update - preparing data")
         
         if self.replay_buffer[-1]["obs"].step_type != environment.StepType.LAST: 
             R = self.replay_buffer[-1]["value"][0][0]
@@ -163,19 +175,19 @@ class RlAgent(base_agent.BaseAgent):
             self.tensors["target_value_input"]: batch_target_value_input}
         feed_dict.update({i: d for i, d in zip(self.tensors["param_input"], batch_param_input)})
         
-        
-        print("update - adjusting parameters")      
+        if self.verbosity >=2:
+            print("Agent", self.id, "update - adjusting parameters")
 
         self.lock.acquire();
         with self.graph.as_default(), tf.device('/cpu:0'):
-            policy_loss, entropy_loss, value_loss, total_loss, norm, clipped, _ = self.session.run([self.tensors["policy_loss"], self.tensors["entropy_loss"], self.tensors["value_loss"], self.tensors["total_loss"], self.tensors["value_loss"], self.tensors["value_loss"], self.tensors["update_step"]] , feed_dict)
+            policy_loss, entropy_loss, value_loss, total_loss, _ = self.session.run([self.tensors["policy_loss"], self.tensors["entropy_loss"], self.tensors["value_loss"], self.tensors["total_loss"], self.tensors["update_step"]] , feed_dict)
             self.session.run(self.tensors["sync_with_global"])
         self.lock.release();
 
-        print("policy loss: ",policy_loss)
-        print("entropy loss: ",entropy_loss)
-        print("value loss: ",value_loss)
-        print("total loss: ",total_loss)
-        print(norm, clipped)
+        if self.verbosity >=2:
+            print("Agent", self.id, "policy loss: ",policy_loss)
+            print("Agent", self.id, "entropy loss: ",entropy_loss)
+            print("Agent", self.id, "value loss: ",value_loss)
+            print("Agent", self.id, "total loss: ",total_loss)
                        
         self.replay_buffer = []
