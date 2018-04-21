@@ -32,6 +32,11 @@ from pysc2.lib import stopwatch
 from absl import app
 from absl import flags
 
+import numpy as np
+import tensorflow as tf
+import pysc2.agents.model as model
+import time
+
 
 FLAGS = flags.FLAGS
 flags.DEFINE_bool("render", True, "Whether to render with pygame.")
@@ -60,8 +65,16 @@ flags.DEFINE_bool("save_replay", True, "Whether to save a replay at the end.")
 flags.DEFINE_string("map", None, "Name of a map to use.")
 flags.mark_flag_as_required("map")
 
+# agent parameters
+flags.DEFINE_float("learning_rate", 0.01, "The network learning_rate")
+flags.DEFINE_float("beta", 1.0, "The value loss weight")
+flags.DEFINE_float("eta", 1.0, "The entropy loss weight")
+flags.DEFINE_bool("use_advantage", True, "Whether to use advantage")
+flags.DEFINE_integer("t_max", -1, "Number of steps between updates")
+flags.DEFINE_integer("output", 1, "Controls the amount of output")
 
-def run_thread(agent_cls, map_name, visualize):
+
+def run_thread(agent_cls, map_name, visualize, id, params, lock, session, graph, optimizer):
   with sc2_env.SC2Env(
       map_name=map_name,
       agent_race=FLAGS.agent_race,
@@ -73,7 +86,7 @@ def run_thread(agent_cls, map_name, visualize):
       minimap_size_px=(FLAGS.minimap_resolution, FLAGS.minimap_resolution),
       visualize=visualize) as env:
     env = available_actions_printer.AvailableActionsPrinter(env)
-    agent = agent_cls()
+    agent = agent_cls(id, params, lock, session, graph, optimizer)
     run_loop.run_loop([agent], env, FLAGS.max_agent_steps)
     if FLAGS.save_replay:
       env.save_replay(agent_cls.__name__)
@@ -89,13 +102,35 @@ def main(unused_argv):
   agent_module, agent_name = FLAGS.agent.rsplit(".", 1)
   agent_cls = getattr(importlib.import_module(agent_module), agent_name)
 
+
+  # Set up parameters
+  params = {
+    "verbosity": FLAGS.output,
+    "learning_rate": FLAGS.learning_rate,
+    "beta": FLAGS.beta,
+    "eta": FLAGS.eta,
+    "use_advantage": FLAGS.use_advantage,
+    "t_max": FLAGS.t_max
+  }
+  # Set up A3C global network
+  graph = tf.get_default_graph()
+  session = tf.Session(graph=graph)
+  optimizer = tf.train.AdamOptimizer(params["learning_rate"])
+  with graph.as_default(), tf.device('/cpu:0'):
+    model.sc2network(optimizer, beta=params["beta"], eta=params["eta"], advantage=params["use_advantage"], scope="global")
+    session.run(tf.variables_initializer(tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, "global")))
+  id = 1
+  # Set up lock
+  lock = threading.Lock()
+
   threads = []
   for _ in range(FLAGS.parallel - 1):
-    t = threading.Thread(target=run_thread, args=(agent_cls, FLAGS.map, False))
+    t = threading.Thread(target=run_thread, args=(agent_cls, FLAGS.map, False, id, params, lock, session, graph, optimizer))
     threads.append(t)
     t.start()
+    id+=1
 
-  run_thread(agent_cls, FLAGS.map, FLAGS.render)
+  run_thread(agent_cls, FLAGS.map, FLAGS.render, id, params, lock, session, graph, optimizer)
 
   for t in threads:
     t.join()

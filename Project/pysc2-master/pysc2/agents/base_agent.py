@@ -23,7 +23,7 @@ from pysc2.lib import actions
 class BaseAgent(object):
   """A base agent to write custom scripted agents."""
 
-  def __init__(self):
+  def __init__(self, id, params, lock, session, optimizer):
     self.reward = 0
     self.episodes = 0
     self.steps = 0

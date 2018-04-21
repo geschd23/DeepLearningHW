@@ -141,7 +141,7 @@ class StarcraftProcess(object):
     for i in range(120):
       is_running = self.running
       was_running = was_running or is_running
-      if (i >= 30 or was_running) and not is_running:
+      if (i >= 120 or was_running) and not is_running:
         logging.warning(
             "SC2 isn't running, so bailing early on the websocket connection.")
         break
