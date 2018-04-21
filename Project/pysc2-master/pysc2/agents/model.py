@@ -4,16 +4,16 @@ import numpy as np
 def dense(input, nodes, regularizer, dropout_rate, training) : 
     x = tf.layers.dropout(input, dropout_rate, training=training)
     x = tf.layers.dense(x, nodes)
-    x = tf.nn.elu(x)
+    x = tf.nn.relu(x)
     return x
 
 def convolution(input, filters, size, regularizer, dropout_rate, training) : 
     x = tf.layers.dropout(input, dropout_rate, training=training)
     x = tf.layers.conv2d(x, filters, size, 1, padding='same', kernel_regularizer=regularizer, bias_regularizer=regularizer)
-    x = tf.nn.elu(x)
+    x = tf.nn.relu(x)
     return x
 
-def sc2network(optimizer, beta, eta, scope):
+def sc2network(optimizer, beta, eta, advantage, scope):
     with tf.variable_scope(scope):
         regularizer = tf.contrib.layers.l2_regularizer(scale=1.)
         dropout_rate = 0.0
@@ -50,7 +50,10 @@ def sc2network(optimizer, beta, eta, scope):
             
             
         with tf.variable_scope('value'):
-            value = dense(dense_state, 1, regularizer, dropout_rate, training)
+            if advantage:
+                value = dense(dense_state, 1, regularizer, dropout_rate, training)
+            else:
+                value = 0 * dense(dense_state, 1, regularizer, dropout_rate, training)
             
         
         with tf.variable_scope('policy'):
@@ -121,60 +124,60 @@ def sc2network(optimizer, beta, eta, scope):
                           param_select_unit_id_policy, param_select_worker_policy, param_build_queue_id_policy,
                           param_unload_id_policy]
 
-            
-        if scope != 'global':
-            with tf.variable_scope('loss'):
+        with tf.variable_scope('loss'):
 
-                with tf.variable_scope('loss_inputs'):
-                    advantage_input = tf.placeholder(tf.float32, [None, 1], name='advantage_input')
-                    target_value_input = tf.placeholder(tf.float32, [None, 1], name='target_value_input')
+            with tf.variable_scope('loss_inputs'):
+                advantage_input = tf.placeholder(tf.float32, [None, 1], name='advantage_input')
+                target_value_input = tf.placeholder(tf.float32, [None, 1], name='target_value_input')
 
-                with tf.variable_scope('action_inputs'):
-                    action_input = tf.placeholder(tf.int32, [None, 1], name='action_input')
-                    param_screen_input = tf.placeholder(tf.int32, [None, 1], name='param_screen_input')
-                    param_minimap_input = tf.placeholder(tf.int32, [None, 1], name='param_minimap_input')
-                    param_screen2_input = tf.placeholder(tf.int32, [None, 1], name='param_screen2_input')
-                    param_queued_input = tf.placeholder(tf.int32, [None, 1], name='param_queued_input')
-                    param_control_group_act_input = tf.placeholder(tf.int32, [None, 1], name='param_control_group_act_input')
-                    param_control_group_id_input = tf.placeholder(tf.int32, [None, 1], name='param_control_group_id_input')
-                    param_select_point_act_input = tf.placeholder(tf.int32, [None, 1], name='param_select_point_act_input')
-                    param_select_add_input = tf.placeholder(tf.int32, [None, 1], name='param_select_add_input')
-                    param_select_unit_act_input = tf.placeholder(tf.int32, [None, 1], name='param_select_unit_act_input')
-                    param_select_unit_id_input = tf.placeholder(tf.int32, [None, 1], name='param_select_unit_id_input')
-                    param_select_worker_input = tf.placeholder(tf.int32, [None, 1], name='param_select_worker_input')
-                    param_build_queue_id_input = tf.placeholder(tf.int32, [None, 1], name='param_build_queue_id_input')
-                    param_unload_id_input = tf.placeholder(tf.int32, [None, 1], name='param_unload_id_input')
+            with tf.variable_scope('action_inputs'):
+                action_input = tf.placeholder(tf.int32, [None, 1], name='action_input')
+                param_screen_input = tf.placeholder(tf.int32, [None, 1], name='param_screen_input')
+                param_minimap_input = tf.placeholder(tf.int32, [None, 1], name='param_minimap_input')
+                param_screen2_input = tf.placeholder(tf.int32, [None, 1], name='param_screen2_input')
+                param_queued_input = tf.placeholder(tf.int32, [None, 1], name='param_queued_input')
+                param_control_group_act_input = tf.placeholder(tf.int32, [None, 1], name='param_control_group_act_input')
+                param_control_group_id_input = tf.placeholder(tf.int32, [None, 1], name='param_control_group_id_input')
+                param_select_point_act_input = tf.placeholder(tf.int32, [None, 1], name='param_select_point_act_input')
+                param_select_add_input = tf.placeholder(tf.int32, [None, 1], name='param_select_add_input')
+                param_select_unit_act_input = tf.placeholder(tf.int32, [None, 1], name='param_select_unit_act_input')
+                param_select_unit_id_input = tf.placeholder(tf.int32, [None, 1], name='param_select_unit_id_input')
+                param_select_worker_input = tf.placeholder(tf.int32, [None, 1], name='param_select_worker_input')
+                param_build_queue_id_input = tf.placeholder(tf.int32, [None, 1], name='param_build_queue_id_input')
+                param_unload_id_input = tf.placeholder(tf.int32, [None, 1], name='param_unload_id_input')
 
-                    param_input = [param_screen_input, param_minimap_input, param_screen2_input, param_queued_input,
-                              param_control_group_act_input, param_control_group_id_input,
-                              param_select_point_act_input, param_select_add_input, param_select_unit_act_input,
-                              param_select_unit_id_input, param_select_worker_input, param_build_queue_id_input,
-                              param_unload_id_input]
+                param_input = [param_screen_input, param_minimap_input, param_screen2_input, param_queued_input,
+                          param_control_group_act_input, param_control_group_id_input,
+                          param_select_point_act_input, param_select_add_input, param_select_unit_act_input,
+                          param_select_unit_id_input, param_select_worker_input, param_build_queue_id_input,
+                          param_unload_id_input]
 
-                with tf.variable_scope('policy_loss'):
-                    action_policy_used = tf.reduce_sum(tf.one_hot(action_input, 524) * action_policy, axis=1)
-                    param_policy_used = [ tf.reduce_sum(tf.one_hot(param_input[i], param_policy[i].get_shape().as_list()[-1]) * param_policy[i], axis=1) for i in range(len(param_policy))]
-                    policy_loss = tf.reduce_sum(advantage_input * tf.log(tf.concat([action_policy_used]+param_policy_used, axis=1)+1E-5))
+            with tf.variable_scope('policy_loss'):
+                action_policy_used = tf.reduce_sum(tf.one_hot(action_input, 524) * action_policy, axis=1)
+                param_policy_used = [ tf.reduce_sum(tf.one_hot(param_input[i], param_policy[i].get_shape().as_list()[-1]) * param_policy[i], axis=1) for i in range(len(param_policy))]
+                policy_loss = tf.reduce_sum(advantage_input * tf.log(tf.concat([action_policy_used]+param_policy_used, axis=1)+1E-5))
 
-                with tf.variable_scope('entropy_loss'):
-                    action_entropy = action_policy * tf.log(action_policy+1E-5)
-                    param_entropy = [ param_policy[i] * tf.log(param_policy[i]+1E-5) for i in range(len(param_policy))]
-                    entropy_loss = tf.reduce_sum(tf.concat([action_entropy]+param_entropy, axis=1))
+            with tf.variable_scope('entropy_loss'):
+                action_entropy = action_policy * tf.log(action_policy+1E-5)
+                param_entropy = [ param_policy[i] * tf.log(param_policy[i]+1E-5) for i in range(len(param_policy))]
+                entropy_loss = tf.reduce_sum(tf.concat([action_entropy]+param_entropy, axis=1))
 
-                with tf.variable_scope('value_loss'):
-                    value_loss = tf.reduce_sum(tf.square(target_value_input-value))
+            with tf.variable_scope('value_loss'):
+                value_loss = tf.reduce_sum(tf.square(target_value_input-value))
 
-                with tf.variable_scope('total_loss'):
-                    total_loss = -policy_loss + beta*value_loss + eta*entropy_loss
+            with tf.variable_scope('total_loss'):
+                total_loss = -policy_loss + beta*value_loss + eta*entropy_loss
 
-                with tf.variable_scope('gradients'):
-                    local_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope)
-                    gradients = tf.gradients(total_loss, local_vars)
-                    #global_norm = tf.global_norm(local_vars)
-                    #clipped_gradients, clipped = tf.clip_by_global_norm(gradients,40.0)
-                    update_step = optimizer.apply_gradients(zip(gradients, local_vars))
-                        
-        
+            with tf.variable_scope('gradients'):
+                local_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope)
+                gradients = tf.gradients(total_loss, local_vars)
+                #global_norm = tf.global_norm(local_vars)
+                #clipped_gradients, clipped = tf.clip_by_global_norm(gradients,40.0)
+                global_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, "global")
+                update_step = optimizer.apply_gradients(zip(gradients, global_vars))
+                sync_with_global = [ tf.assign(local_vars[i], global_vars[i]) for i in range(len(local_vars)) ]
+                    
+    
     return {"screen_input": screen_input,
             "minimap_input": minimap_input,
             "player_input": player_input,
@@ -190,6 +193,7 @@ def sc2network(optimizer, beta, eta, scope):
             "target_value_input": target_value_input,
             "gradients": gradients,
             "update_step": update_step,
+            "sync_with_global": sync_with_global,
             #"global_norm": global_norm,
             #"clipped": clipped,
             "policy_loss": policy_loss, 

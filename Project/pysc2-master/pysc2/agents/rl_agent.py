@@ -32,9 +32,18 @@ from tensorflow.python.client import timeline
 
 class RlAgent(base_agent.BaseAgent):
     """A Deep RL agent for starcraft."""
-    def __init__(self):
-        super(RlAgent,self).__init__()
-        self.tensors = model.sc2network(tf.train.AdamOptimizer(0.001), beta=0.5, eta=0.01, scope="local")
+    def __init__(self, id, params, lock, session, graph, optimizer):
+        super(RlAgent,self).__init__(id, params, lock, session, optimizer)
+        self.id = id
+        self.lock = lock
+        print("Constructing agent", self.id)
+        self.session = session
+        self.graph = graph
+        self.lock.acquire();
+        with self.graph.as_default(), tf.device('/cpu:0'):
+            self.tensors = model.sc2network(optimizer, beta=params["beta"], eta=params["eta"], advantage=params["use_advantage"], scope="local"+str(id))
+            self.session.run(tf.variables_initializer(tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, "local"+str(id)), name="initlocal"+str(id)))
+        self.lock.release();
         self.normalization = {
         "screen_input":[[[[256,4,2,2,17,5,1850,2,1600,256,1000,256,1000,256,16,256,16]]]],
         "minimap_input":[[[[256,4,2,2,17,5,2]]]],
@@ -42,11 +51,8 @@ class RlAgent(base_agent.BaseAgent):
         "single_select_input":[[1850,5,1600,1000,1000,100,100]],
         "game_loop_input":[[2000]],
         }
-        self.session = tf.Session()
-        self.session.run(tf.global_variables_initializer())
         self.replay_buffer = []
-        self.t_max = -1
-        print("constructing agent", id(self))
+        self.t_max = params["t_max"]
         print("Network parameters", np.sum([np.prod(v.get_shape().as_list()) for v in tf.trainable_variables()]))
 
     def step(self, obs):
@@ -67,14 +73,17 @@ class RlAgent(base_agent.BaseAgent):
             self.tensors["game_loop_input"]: np.swapaxes(np.reshape(np.array(obs.observation["game_loop"]), [1,1]),0,1) / self.normalization["game_loop_input"],
             self.tensors["action_mask"]: action_mask}
         
-        action_policy, param_policy, value = self.session.run([self.tensors["action_policy"], self.tensors["param_policy"], self.tensors["value"]], feed_dict)
-        
+        self.lock.acquire();
+        with self.graph.as_default(), tf.device('/cpu:0'):
+            action_policy, param_policy, value = self.session.run([self.tensors["action_policy"], self.tensors["param_policy"], self.tensors["value"]], feed_dict)
+        self.lock.release();
+
         policy_dict = {}
         for i in range(len(action_policy[0])):
             if action_policy[0][i] != 0:
                 policy_dict[i] = round(action_policy[0][i],2)
                 
-        print("action policy: ", policy_dict)
+        #print("action policy: ", policy_dict)
            
         action = [[np.random.choice(range(len(action_policy[0])), p=action_policy[0])]]
         params = [[[np.random.choice(range(len(param[0])), p=param[0])]] for param in param_policy]  
@@ -88,7 +97,7 @@ class RlAgent(base_agent.BaseAgent):
         temp[1][0] = [params[1][0][0]%64, params[1][0][0]//64] # minimap
         temp[2][0] = [params[2][0][0]%64, params[2][0][0]//64] # screen2
         args = [temp[arg.id][0] for arg in self.action_spec.functions[function].args]
-        print("selected action: ",function, args, "Value estimate: ", value)
+        #print("selected action: ",function, args, "Value estimate: ", value)
               
         return actions.FunctionCall(function, args)
 
@@ -157,7 +166,12 @@ class RlAgent(base_agent.BaseAgent):
         
         print("update - adjusting parameters")      
 
-        policy_loss, entropy_loss, value_loss, total_loss, norm, clipped, _ = self.session.run([self.tensors["policy_loss"], self.tensors["entropy_loss"], self.tensors["value_loss"], self.tensors["total_loss"], self.tensors["value_loss"], self.tensors["value_loss"], self.tensors["update_step"]] , feed_dict)
+        self.lock.acquire();
+        with self.graph.as_default(), tf.device('/cpu:0'):
+            policy_loss, entropy_loss, value_loss, total_loss, norm, clipped, _ = self.session.run([self.tensors["policy_loss"], self.tensors["entropy_loss"], self.tensors["value_loss"], self.tensors["total_loss"], self.tensors["value_loss"], self.tensors["value_loss"], self.tensors["update_step"]] , feed_dict)
+            self.session.run(self.tensors["sync_with_global"])
+        self.lock.release();
+
         print("policy loss: ",policy_loss)
         print("entropy loss: ",entropy_loss)
         print("value loss: ",value_loss)
