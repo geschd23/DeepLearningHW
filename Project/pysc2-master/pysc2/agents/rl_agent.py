@@ -177,12 +177,28 @@ class RlAgent(base_agent.BaseAgent):
         
         if self.verbosity >=2:
             print("Agent", self.id, "update - adjusting parameters")
+            
 
         self.lock.acquire();
+        
+        #variables_names =[v.name for v in tf.trainable_variables()]
+        #values = self.session.run(variables_names)
+        #for k,v in zip(variables_names, values):
+        #    if k == "local1/value/printThis/kernel:0":
+        #        print(k, v)
+        
         with self.graph.as_default(), tf.device('/cpu:0'):
             policy_loss, entropy_loss, value_loss, total_loss, _ = self.session.run([self.tensors["policy_loss"], self.tensors["entropy_loss"], self.tensors["value_loss"], self.tensors["total_loss"], self.tensors["update_step"]] , feed_dict)
             self.session.run(self.tensors["sync_with_global"])
+            
+        #variables_names =[v.name for v in tf.trainable_variables()]
+        #values = self.session.run(variables_names)
+        #for k,v in zip(variables_names, values):
+        #    if k == "local1/value/printThis/kernel:0":
+        #        print(k, v)
+            
         self.lock.release();
+        
 
         if self.verbosity >=2:
             print("Agent", self.id, "policy loss: ",policy_loss)

@@ -1,9 +1,9 @@
 import tensorflow as tf
 import numpy as np
 
-def dense(input, nodes, regularizer, dropout_rate, training) : 
+def dense(input, nodes, regularizer, dropout_rate, training, name='dense') : 
     x = tf.layers.dropout(input, dropout_rate, training=training)
-    x = tf.layers.dense(x, nodes)
+    x = tf.layers.dense(x, nodes, name=name)
     x = tf.nn.relu(x)
     return x
 
@@ -45,13 +45,15 @@ def sc2network(optimizer, beta, eta, advantage, scope):
             broadcast_single_select_input = tf.tile(tf.reshape(single_select_input, [-1,1,1,7]), [1, 64, 64, 1])
             #full_state = tf.concat([screen, minimap, broadcast_player_input, broadcast_single_select_input], axis=3)
             state_2d = screen_input[:,:,:,5:6]
-            state_1d = game_loop_input#tf.concat([single_select_input,game_loop_input], axis=1)
+            state_2d = convolution(state_2d, 2, 5, regularizer, dropout_rate, training)
+            state_2d = convolution(state_2d, 4, 3, regularizer, dropout_rate, training)
+            state_1d = tf.concat([single_select_input,game_loop_input], axis=1)
             dense_state = dense(state_1d, 10, regularizer, dropout_rate, training)
             
             
         with tf.variable_scope('value'):
             if advantage:
-                value = dense(dense_state, 1, regularizer, dropout_rate, training)
+                value = dense(dense_state, 1, regularizer, dropout_rate, training, name='printThis')
             else:
                 value = 0 * dense(dense_state, 1, regularizer, dropout_rate, training)
             
@@ -155,7 +157,7 @@ def sc2network(optimizer, beta, eta, advantage, scope):
             with tf.variable_scope('policy_loss'):
                 action_policy_used = tf.reduce_sum(tf.one_hot(action_input, 524) * action_policy, axis=1)
                 param_policy_used = [ tf.reduce_sum(tf.one_hot(param_input[i], param_policy[i].get_shape().as_list()[-1]) * param_policy[i], axis=1) for i in range(len(param_policy))]
-                policy_loss = tf.reduce_sum(advantage_input * tf.log(tf.concat([action_policy_used]+param_policy_used, axis=1)+1E-5))
+                policy_loss = tf.reduce_sum((advantage_input - 1) * tf.log(tf.concat([action_policy_used]+param_policy_used, axis=1)+1E-5))
 
             with tf.variable_scope('entropy_loss'):
                 action_entropy = action_policy * tf.log(action_policy+1E-5)
