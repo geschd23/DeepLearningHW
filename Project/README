@@ -1,0 +1,33 @@
+Deep Reinforcement Learning and StarCraft II
+Daniel Geschwender, Yanfeng Liu, Jeevan Rajagopal
+May 2, 2018
+==============================================================================
+File Description:
+
+The majority of the files contained within pysc2-master/ are files provided
+with the PySC2 library (github.com/deepmind/pysc2). The following files 
+include our project code:
+
+ * pysc2-master/pysc2/bin/agent.py (modified)
+    Added code for parameter handling and to define the global network
+ * pysc2-master/pysc2/agents/model.py (added)
+    Defines our Tensorflow neural network
+ * pysc2-master/pysc2/agents/rl_agent.py (added)
+    Defines our agent, how to generate actions from the network, and how to 
+    perform weight updates on the global network
+==============================================================================
+Setup:
+
+ 1. Install StarCraft II and all required maps. Set the 'SC2PATH' environment
+    variable to the StarCraft II installation location. Detailed instructions
+    can be found at: github.com/Blizzard/s2client-proto
+ 2. Set up our modified version of the PySC2 library by simply adding our 
+    pysc2-master/ directory to your 'PYTHONPATH'
+==============================================================================
+Running:
+
+ * To run our agent on the MoveToBeacon mini-game with default parameters:
+    python -m pysc2.bin.agent --map MoveToBeacon --agent pysc2.agents.rl_agent.RlAgent --screen_resolution 64 
+ * To list additional command line arguments provided by PySC2 and our code:
+    python -m pysc2.bin.agent --map MoveToBeacon --agent pysc2.agents.rl_agent.RlAgent --help
+==============================================================================
