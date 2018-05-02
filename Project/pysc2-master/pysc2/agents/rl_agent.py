@@ -21,6 +21,7 @@ import numpy as np
 import tensorflow as tf
 import pysc2.agents.model as model
 from datetime import datetime
+import time
 import copy
 
 from pysc2.agents import base_agent
@@ -37,14 +38,12 @@ class RlAgent(base_agent.BaseAgent):
         self.id = id
         self.lock = lock
         self.verbosity = params["verbosity"]
-        print("Constructing agent", self.id)
         self.session = session
         self.graph = graph
-        self.lock.acquire();
+        print("Constructing agent", self.id)
         with self.graph.as_default(), tf.device('/cpu:0'):
             self.tensors = model.sc2network(optimizer, beta=params["beta"], eta=params["eta"], advantage=params["use_advantage"], scope="local"+str(id))
             self.session.run(tf.variables_initializer(tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, "local"+str(id)), name="initlocal"+str(id)))
-        self.lock.release();
         self.normalization = {
         "screen_input":[[[[256,4,2,2,17,5,1850,2,1600,256,1000,256,1000,256,16,256,16]]]],
         "minimap_input":[[[[256,4,2,2,17,5,2]]]],
@@ -55,7 +54,7 @@ class RlAgent(base_agent.BaseAgent):
         self.replay_buffer = []
         self.t_max = params["t_max"]
         self.last_score = 0
-        print("Network parameters", np.sum([np.prod(v.get_shape().as_list()) for v in tf.trainable_variables()]))
+        time.sleep(0.2)
 
     def step(self, obs):
         super(RlAgent, self).step(obs)
@@ -86,7 +85,9 @@ class RlAgent(base_agent.BaseAgent):
                 policy_dict[i] = round(action_policy[0][i],2)
 
         if self.verbosity >=4:
+            self.lock.acquire();
             print("Agent", self.id, "action policy: ", policy_dict)
+            self.lock.release();
            
         action = [[np.random.choice(range(len(action_policy[0])), p=action_policy[0])]]
         params = [[[np.random.choice(range(len(param[0])), p=param[0])]] for param in param_policy]  
@@ -102,7 +103,9 @@ class RlAgent(base_agent.BaseAgent):
         args = [temp[arg.id][0] for arg in self.action_spec.functions[function].args]
 
         if self.verbosity >=3:
+            self.lock.acquire();
             print("Agent", self.id, "selected action: ",function, args, "Value estimate: ", value)
+            self.lock.release();
               
         return actions.FunctionCall(function, args)
 
@@ -111,7 +114,9 @@ class RlAgent(base_agent.BaseAgent):
 
         if len(self.replay_buffer) > 0:
             if self.verbosity >=1:
+                self.lock.acquire();
                 print("Agent", self.id, "score on episode", self.episodes - 1, " = ", self.reward - self.last_score)
+                self.lock.release();
             self.update()
 
         self.last_score = self.reward
@@ -119,7 +124,9 @@ class RlAgent(base_agent.BaseAgent):
     def update(self):
 
         if self.verbosity >=2:
+            self.lock.acquire();
             print("Agent", self.id, "update - preparing data")
+            self.lock.release();
         
         if self.replay_buffer[-1]["obs"].step_type != environment.StepType.LAST: 
             R = self.replay_buffer[-1]["value"][0][0]
@@ -175,11 +182,11 @@ class RlAgent(base_agent.BaseAgent):
             self.tensors["target_value_input"]: batch_target_value_input}
         feed_dict.update({i: d for i, d in zip(self.tensors["param_input"], batch_param_input)})
         
+            
+        self.lock.acquire();
+        
         if self.verbosity >=2:
             print("Agent", self.id, "update - adjusting parameters")
-            
-
-        self.lock.acquire();
         
         #variables_names =[v.name for v in tf.trainable_variables()]
         #values = self.session.run(variables_names)
@@ -196,14 +203,13 @@ class RlAgent(base_agent.BaseAgent):
         #for k,v in zip(variables_names, values):
         #    if k == "local1/value/printThis/kernel:0":
         #        print(k, v)
-            
-        self.lock.release();
-        
 
         if self.verbosity >=2:
             print("Agent", self.id, "policy loss: ",policy_loss)
             print("Agent", self.id, "entropy loss: ",entropy_loss)
             print("Agent", self.id, "value loss: ",value_loss)
             print("Agent", self.id, "total loss: ",total_loss)
-                       
+            
+        self.lock.release();
+        time.sleep(0.2)     
         self.replay_buffer = []

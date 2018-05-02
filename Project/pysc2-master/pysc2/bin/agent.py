@@ -75,6 +75,7 @@ flags.DEFINE_integer("output", 1, "Controls the amount of output")
 
 
 def run_thread(agent_cls, map_name, visualize, id, params, lock, session, graph, optimizer):
+  lock.acquire()
   with sc2_env.SC2Env(
       map_name=map_name,
       agent_race=FLAGS.agent_race,
@@ -86,7 +87,9 @@ def run_thread(agent_cls, map_name, visualize, id, params, lock, session, graph,
       minimap_size_px=(FLAGS.minimap_resolution, FLAGS.minimap_resolution),
       visualize=visualize) as env:
     env = available_actions_printer.AvailableActionsPrinter(env)
+    print("Constructing ", id, "in run_thread")
     agent = agent_cls(id, params, lock, session, graph, optimizer)
+    lock.release()
     run_loop.run_loop([agent], env, FLAGS.max_agent_steps)
     if FLAGS.save_replay:
       env.save_replay(agent_cls.__name__)
@@ -115,7 +118,7 @@ def main(unused_argv):
   # Set up A3C global network
   graph = tf.get_default_graph()
   session = tf.Session(graph=graph)
-  optimizer = tf.train.AdamOptimizer(params["learning_rate"])
+  optimizer = tf.train.RMSPropOptimizer(params["learning_rate"])
   with graph.as_default(), tf.device('/cpu:0'):
     model.sc2network(optimizer, beta=params["beta"], eta=params["eta"], advantage=params["use_advantage"], scope="global")
     session.run(tf.variables_initializer(tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, "global")))
